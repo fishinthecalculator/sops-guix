@@ -1,0 +1,4 @@
+;; -*- mode: scheme; -*-
+(channel
+ (version 0)                            ;file format version
+ (directory "modules"))
