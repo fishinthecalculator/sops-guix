@@ -1,0 +1,26 @@
+# -*- mode: snippet -*-
+# name: guix-commit-message-update-package
+# key: update
+# condition: git-commit-mode
+# --
+
+gnu: ${1:`(with-temp-buffer
+           (magit-git-wash #'magit-diff-wash-diffs
+             "diff" "--staged")
+           (goto-char (point-min))
+           (when (re-search-forward "^[ ]*(define-public \\(\\S-+\\)" nil 'noerror)
+             (match-string-no-properties 1)))`}: Update to ${2:`(with-temp-buffer
+    (magit-git-wash #'magit-diff-wash-diffs
+      "diff" "--staged")
+    (goto-char (point-min))
+    (search-forward "name" nil 'noerror)
+    (search-forward "+" nil 'noerror)   ; first change
+    (when (and (search-forward "version " nil 'noerror)
+               (looking-at-p "\""))
+      (let ((end (save-excursion (search-forward "\")" nil 'noerror))))
+        (when end
+          (forward-char)
+          (buffer-substring-no-properties (point) (- end 2))))))`}.
+
+* `(car (magit-staged-files))` ($1): Update to $2.$0
+`(mapconcat (lambda (file) (concat "* " file)) (cdr (magit-staged-files)) "\n")`

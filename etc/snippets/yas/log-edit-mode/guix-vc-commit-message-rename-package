@@ -1,0 +1,14 @@
+# -*- mode: snippet -*-
+# name: guix-vc-commit-message-rename-package
+# key: rename
+# --
+gnu: ${1:`(when (string-match "\\-(define-public \\(\\S-+\\)" vc-patch-string)
+            (match-string-no-properties 1 vc-patch-string))
+            `}: Rename package to ${2:`
+            (when (string-match "\\+(define-public \\(\\S-+\\)" vc-patch-string)
+            (match-string-no-properties 1 vc-patch-string))`}.
+
+* `(car (log-edit-files))` ($1): Define in terms of
+'deprecated-package'.
+($2): New variable, formerly known as "$1".
+`(mapconcat (lambda (file) (concat "* " file)) (cdr (log-edit-files)) "\n")`

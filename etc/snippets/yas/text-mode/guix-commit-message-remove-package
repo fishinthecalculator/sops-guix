@@ -1,0 +1,13 @@
+# -*- mode: snippet -*-
+# name: guix-commit-message-remove-package
+# key: remove
+# condition: git-commit-mode
+# --
+gnu: Remove ${1:`(with-temp-buffer
+                   (magit-git-wash #'magit-diff-wash-diffs
+                     "diff" "--staged")
+                   (goto-char (point-min))
+                   (when (re-search-forward "\\-(define-public \\(\\S-+\\)" nil 'noerror)
+                     (match-string-no-properties 1)))`}.
+
+* `(car (magit-staged-files))` ($1): Delete variable.

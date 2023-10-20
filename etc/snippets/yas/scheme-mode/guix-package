@@ -1,0 +1,50 @@
+# -*- mode: snippet -*-
+# name: guix-package
+# key: package...
+# --
+(define-public $1
+  (package
+    (name "$1")
+    (version "$2")
+    (source origin...$0)
+    (build-system ${3:$$(yas-choose-value "android-ndk-build-system"
+                                          "ant-build-system"
+                                          "asdf-build-system"
+                                          "cargo-build-system"
+                                          "chicken-build-system"
+                                          "clojure-build-system"
+                                          "cmake-build-system"
+                                          "copy-build-system"
+                                          "dub-build-system"
+                                          "dune-build-system"
+                                          "emacs-build-system"
+                                          "font-build-system"
+                                          "glib-or-gtk-build-system"
+                                          "gnu-build-system"
+                                          "go-build-system"
+                                          "guile-build-system"
+                                          "haskell-build-system"
+                                          "julia-build-system"
+                                          "linux-module-build-system"
+                                          "maven-build-system"
+                                          "meson-build-system"
+                                          "minetest-build-system"
+                                          "minify-build-system"
+                                          "node-build-system"
+                                          "ocaml-build-system"
+                                          "perl-build-system"
+                                          "python-build-system"
+                                          "qt-build-system"
+                                          "r-build-system"
+                                          "rakudo-build-system"
+                                          "rebar-build-system"
+                                          "renpy-build-system"
+                                          "ruby-build-system"
+                                          "scons-build-system"
+                                          "texlive-build-system"
+                                          "trivial-build-system"
+                                          "waf-build-system")})
+    (home-page "$4")
+    (synopsis "$5")
+    (description "$6")
+    (license $7)))
