@@ -23,7 +23,7 @@ Otherwise, if you already have a `.config/guix/channels.scm` you can simply prep
 
 ``` scheme
 (cons* (channel
-        (name 'small-guix)
+        (name 'sops-guix)
         (url "https://git.sr.ht/~fishinthecalculator/sops-guix")
         ;; Enable signature verification:
         (introduction
