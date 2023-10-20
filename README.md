@@ -13,7 +13,7 @@ To configure Guix for using this channel you need to create a `.config/guix/chan
         ;; Enable signature verification:
         (introduction
          (make-channel-introduction
-          "4a1aecea90774e14eeb0647d4e7716698de689cb"
+          "bea63b9b2d07d7a978db8d271130171cdcc410e6"
           (openpgp-fingerprint
            "D088 4467 87F7 CBB2 AE08  BE6D D075 F59A 4805 49C3"))))
        %default-channels)
@@ -28,7 +28,7 @@ Otherwise, if you already have a `.config/guix/channels.scm` you can simply prep
         ;; Enable signature verification:
         (introduction
          (make-channel-introduction
-          "4a1aecea90774e14eeb0647d4e7716698de689cb"
+          "bea63b9b2d07d7a978db8d271130171cdcc410e6"
           (openpgp-fingerprint
            "D088 4467 87F7 CBB2 AE08  BE6D D075 F59A 4805 49C3"))))
        (channel
