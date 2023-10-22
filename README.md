@@ -10,6 +10,7 @@ To configure Guix for using this channel you need to create a `.config/guix/chan
 (cons* (channel
         (name 'sops-guix)
         (url "https://git.sr.ht/~fishinthecalculator/sops-guix")
+        (branch "main")
         ;; Enable signature verification:
         (introduction
          (make-channel-introduction
@@ -25,6 +26,7 @@ Otherwise, if you already have a `.config/guix/channels.scm` you can simply prep
 (cons* (channel
         (name 'sops-guix)
         (url "https://git.sr.ht/~fishinthecalculator/sops-guix")
+        (branch "main")
         ;; Enable signature verification:
         (introduction
          (make-channel-introduction
