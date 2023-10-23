@@ -27,8 +27,6 @@
     (build-system go-build-system)
     (arguments
      '(#:import-path "github.com/Mic92/ssh-to-age"))
-    (native-inputs
-     (list gnupg))
     (propagated-inputs (list go-golang-org-x-sys
                              go-golang-org-x-crypto
                              go-filippo-io-edwards25519
