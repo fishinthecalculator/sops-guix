@@ -6,7 +6,7 @@
   #:use-module (gnu services configuration)
   #:use-module (guix gexp)
   #:use-module (guix packages)
-  #:use-module (sops packages gnupg)
+  #:use-module (gnu packages gnupg)
   #:use-module (sops packages sops)
   #:use-module (srfi srfi-1)
   #:export (sops-secrets-service-type
