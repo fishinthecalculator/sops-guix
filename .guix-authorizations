@@ -5,7 +5,5 @@
 (authorizations
  (version 0)               ;current file format version
 
- (("D088 4467 87F7 CBB2 AE08  BE6D D075 F59A 4805 49C3"
-   (name "giacomo"))
-  ("5DDA 8640 91E2 2B80 086A  35C3 A7DD 0C84 A659 769B"
+ (("5DDA 8640 91E2 2B80 086A  35C3 A7DD 0C84 A659 769B"
    (name "giacomo"))))
