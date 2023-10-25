@@ -4,6 +4,7 @@
 (define-module (sops services sops)
   #:use-module (gnu services)
   #:use-module (gnu services configuration)
+  #:use-module (gnu services shepherd)
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module (gnu packages gnupg)
