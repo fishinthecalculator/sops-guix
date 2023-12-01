@@ -14,9 +14,9 @@ To configure Guix for using this channel you need to create a `.config/guix/chan
         ;; Enable signature verification:
         (introduction
          (make-channel-introduction
-          "bea63b9b2d07d7a978db8d271130171cdcc410e6"
+          "0bbaf1fdd25266c7df790f65640aaa01e6d2dbc9"
           (openpgp-fingerprint
-           "D088 4467 87F7 CBB2 AE08  BE6D D075 F59A 4805 49C3"))))
+           "8D10 60B9 6BB8 292E 829B  7249 AED4 1CC1 93B7 01E2"))))
        %default-channels)
 ```
 
@@ -30,9 +30,9 @@ Otherwise, if you already have a `.config/guix/channels.scm` you can simply prep
         ;; Enable signature verification:
         (introduction
          (make-channel-introduction
-          "bea63b9b2d07d7a978db8d271130171cdcc410e6"
+          "0bbaf1fdd25266c7df790f65640aaa01e6d2dbc9"
           (openpgp-fingerprint
-           "D088 4467 87F7 CBB2 AE08  BE6D D075 F59A 4805 49C3"))))
+           "8D10 60B9 6BB8 292E 829B  7249 AED4 1CC1 93B7 01E2"))))
        (channel
         (name 'nonguix)
         (url "https://gitlab.com/nonguix/nonguix")

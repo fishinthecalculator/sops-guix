@@ -4,9 +4,9 @@
 # @file
 # @version 0.1
 
-# Introduction of the 'small-guix' channel.
-channel_intro_commit = bea63b9b2d07d7a978db8d271130171cdcc410e6
-channel_intro_signer = D088 4467 87F7 CBB2 AE08  BE6D D075 F59A 4805 49C3
+# Introduction of the 'sops-guix' channel.
+channel_intro_commit = 0bbaf1fdd25266c7df790f65640aaa01e6d2dbc9
+channel_intro_signer = 8D10 60B9 6BB8 292E 829B  7249 AED4 1CC1 93B7 01E2
 
 authenticate:
 	echo "Authenticating Git checkout..." ;	\
