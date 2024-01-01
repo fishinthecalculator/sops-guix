@@ -16,6 +16,9 @@
   #:use-module (sops packages sops-nix)
   #:use-module (ice-9 match))
 
+(define %source-dir
+  (string-append (current-source-directory) "/bin"))
+
 (define-public sops-guix-utils
   (package
     (name "sops-guix-utils")
