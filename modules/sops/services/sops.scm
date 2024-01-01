@@ -79,50 +79,51 @@ more than welcome to provide your own key in the root keyring.")
 
 (define (%secrets-activation config)
   "Return an activation gexp for system secrets."
-  (let* ((bash (file-append bash-minimal "/bin/bash"))
-         (extract-secret.sh
-          (file-append sops-guix-utils "/bin/extract-secret.sh"))
-         (file
-          (sops-service-configuration-file config))
-         (generate-key?
-          (sops-service-configuration-generate-key? config))
-         (generate-host-key.sh
-          (file-append sops-guix-utils "/bin/generate-host-key.sh"))
-         (gpg (file-append gnupg "/bin/gpg"))
-         (secrets
-          (map lower-sops-secret (sops-service-configuration-secrets config)))
-         (secrets-directory
-          (sops-service-configuration-secrets-directory config)))
-    #~(begin
-        (use-modules (guix build utils)
-                     (ice-9 match))
+  (when config
+    (let* ((bash (file-append bash-minimal "/bin/bash"))
+           (extract-secret.sh
+            (file-append sops-guix-utils "/bin/extract-secret.sh"))
+           (file
+            (sops-service-configuration-file config))
+           (generate-key?
+            (sops-service-configuration-generate-key? config))
+           (generate-host-key.sh
+            (file-append sops-guix-utils "/bin/generate-host-key.sh"))
+           (gpg (file-append gnupg "/bin/gpg"))
+           (secrets
+            (map lower-sops-secret (sops-service-configuration-secrets config)))
+           (secrets-directory
+            (sops-service-configuration-secrets-directory config)))
+      #~(begin
+          (use-modules (guix build utils)
+                       (ice-9 match))
 
-        (setenv "SOPS_GPG_EXEC" #$gpg)
+          (setenv "SOPS_GPG_EXEC" #$gpg)
 
-        (if generate-key?
-            (invoke #$generate-host-key.sh)
-            (format #t "no host key will be generated...~%"))
+          (if generate-key?
+              (invoke #$generate-host-key.sh)
+              (format #t "no host key will be generated...~%"))
 
-        (format #t "setting up secrets in '~a'...~%" #$secrets-directory)
-        (if (file-exists? #$secrets-directory)
-            (for-each (compose delete-file
-                               (cut string-append #$secrets-directory "/" <>))
-                      (scandir secrets-directory
-                               (lambda (file)
-                                 (not (member file '("." ".."))))
-                               string<?))
-            (mkdir-p #$secrets-directory))
+          (format #t "setting up secrets in '~a'...~%" #$secrets-directory)
+          (if (file-exists? #$secrets-directory)
+              (for-each (compose delete-file
+                                 (cut string-append #$secrets-directory "/" <>))
+                        (scandir secrets-directory
+                                 (lambda (file)
+                                   (not (member file '("." ".."))))
+                                 string<?))
+              (mkdir-p #$secrets-directory))
 
-        ;; Actually decrypt secrets
-        (for-each
-         (match-lambda
-           ((key user group permissions path)
-            (let ((uid (passwd:uid user))
-                  (gid (passwd:gid group)))
-              (invoke #$extract-secret.sh key path file)
-              (chown path uid gid)
-              (chmod path permissions))))
-         #$secrets))))
+          ;; Actually decrypt secrets
+          (for-each
+           (match-lambda
+             ((key user group permissions path)
+              (let ((uid (passwd:uid user))
+                    (gid (passwd:gid group)))
+                (invoke #$extract-secret.sh key path file)
+                (chown path uid gid)
+                (chmod path permissions))))
+           #$secrets)))))
 
 (define (secrets->sops-service-configuration config secrets)
   (sops-service-configuration
@@ -138,7 +139,7 @@ more than welcome to provide your own key in the root keyring.")
                                                      (lambda _ (list gnupg sops-guix-utils)))
                                   (service-extension activation-service-type
                                                      %secrets-activation)))
-                (default-value (sops-service-configuration))
+                (default-value #f)
                 (compose concatenate)
                 (extend secrets->sops-service-configuration)
                 (description
