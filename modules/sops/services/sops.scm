@@ -32,7 +32,13 @@
             %secrets-activation))
 
 (define (string-or-gexp? value)
-  (or (string? value) (gexp? value)))
+  (if (or (string? value) (gexp? value))
+      value
+      (raise
+       (formatted-message
+        (G_ "key field value must contain only strings or gexps,
+but ~a was found")
+        value))))
 
 (define-configuration/no-serialization sops-secret
   (key
