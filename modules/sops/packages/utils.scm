@@ -28,16 +28,16 @@
                 "-email root@localhost "
                 "-format armor "
                 "-name root "
-                " -i /etc/ssh/ssh_host_rsa_key -private-key\n"
+                " -i /etc/ssh/ssh_host_rsa_key -private-key 2>/dev/null\n"
      "}\n"
      "export key_id=$(ssh-to-pgp-private-key | "
      gpg " --import-options show-only --import |"
-     grep " -A 1 'sec#' | " tail " -1)\n"
-     "if " gpg " --list-keys | " grep " -q $key_id; then\n"
-     "    ssh-to-pgp-private-key | "
-          gpg " --import\n"
+     grep " -E -A 1 'sec(#)?' | " tail " -1 2>&1)\n"
+     "if " gpg " --list-keys | " grep " -i -q $key_id; then\n"
+     "    " echo " ${key_id} already known, skipping import...\n"
      "else\n"
-     "    " echo " ${key_id} already known, skipping import...\nfi\n")))
+     "    ssh-to-pgp-private-key | "
+          gpg " --import\nfi\n")))
 
 (define-public sops-guix-utils
   (package
