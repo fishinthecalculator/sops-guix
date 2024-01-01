@@ -33,7 +33,7 @@
 
 (define-configuration/no-serialization sops-secret
   (key
-   (gexp)
+   (string-or-gexp)
    "A string or a gexp evaluating to a key in the secrets file.")
   (user
    (string "root")
@@ -55,8 +55,8 @@
       #$(sops-secret-permissions secret)
       #$(sops-secret-path secret)))
 
-(define (list-of-sops-secrets? l)
-  (every package? l))
+(define list-of-sops-secrets?
+  (list-of sops-secret?))
 
 (define-configuration/no-serialization sops-service-configuration
   (sops
