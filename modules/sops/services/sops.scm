@@ -7,6 +7,7 @@
   #:use-module (gnu services shepherd)
   #:use-module (guix gexp)
   #:use-module (guix packages)
+  #:use-module (gnu packages bash)
   #:use-module (gnu packages gnupg)
   #:use-module (sops packages sops)
   #:use-module (sops packages utils)
@@ -24,8 +25,10 @@
             sops-service-configuration
             sops-service-configuration?
             sops-service-configuration-sops
+            sops-service-configuration-config
             sops-service-configuration-file
             sops-service-configuration-generate-key?
+            sops-service-configuration-gnupg-home
             sops-service-configuration-secrets-directory
             sops-service-configuration-secrets
 
@@ -37,6 +40,15 @@
       (raise
        (formatted-message
         (G_ "key field value must contain only strings or gexps,
+but ~a was found")
+        value))))
+
+(define (gexp-or-file-like? value)
+  (if (or (file-like? value) (gexp? value))
+      value
+      (raise
+       (formatted-message
+        (G_ "file field value must contain only gexps or file-like objects,
 but ~a was found")
         value))))
 
@@ -71,14 +83,21 @@ but ~a was found")
   (sops
    (package sops)
    "The @code{SOPS} package used to perform decryption.")
+  (config
+   (gexp-or-file-like)
+   "A gexp or file-like object evaluating to the SOPS config file.")
   (file
-   (gexp)
+   (gexp-or-file-like)
    "A gexp or file-like object evaluating to the secrets file.")
   (generate-key?
    (boolean #f)
    "When true a GPG key will be derived from the host SSH RSA key with
-@code{ssh-to-pgp} and added to the root keyring. It is discouraged and you are
-more than welcome to provide your own key in the root keyring.")
+@code{ssh-to-pgp} and added to the keyring located at
+@code{gnupg-home} field value. It is discouraged and you are
+more than welcome to provide your own key in the keyring.")
+  (gnupg-home
+   (string "/root/.gnupg")
+   "The homedir of GnuPG, i.e. where keys used to decrypt SOPS secrets will be looked for.")
   (secrets-directory
    (string "/run/secrets")
    "The path on the root filesystem where the secrets will be decrypted.")
@@ -90,6 +109,8 @@ more than welcome to provide your own key in the root keyring.")
   "Return an activation gexp for system secrets."
   (when config
     (let* ((bash (file-append bash-minimal "/bin/bash"))
+           (config-file
+            (sops-service-configuration-config config))
            (extract-secret.sh
             (file-append sops-guix-utils "/bin/extract-secret.sh"))
            (file
@@ -99,17 +120,21 @@ more than welcome to provide your own key in the root keyring.")
            (generate-host-key.sh
             (file-append sops-guix-utils "/bin/generate-host-key.sh"))
            (gpg (file-append gnupg "/bin/gpg"))
+           (gnupg-home
+            (sops-service-configuration-gnupg-home config))
            (secrets
             (map lower-sops-secret (sops-service-configuration-secrets config)))
            (secrets-directory
             (sops-service-configuration-secrets-directory config)))
       #~(begin
           (use-modules (guix build utils)
+                       (ice-9 ftw)
                        (ice-9 match))
 
+          (setenv "GNUPGHOME" #$gnupg-home)
           (setenv "SOPS_GPG_EXEC" #$gpg)
 
-          (if generate-key?
+          (if #$generate-key?
               (invoke #$generate-host-key.sh)
               (format #t "no host key will be generated...~%"))
 
@@ -117,22 +142,27 @@ more than welcome to provide your own key in the root keyring.")
           (if (file-exists? #$secrets-directory)
               (for-each (compose delete-file
                                  (cut string-append #$secrets-directory "/" <>))
-                        (scandir secrets-directory
+                        (scandir #$secrets-directory
                                  (lambda (file)
                                    (not (member file '("." ".."))))
                                  string<?))
               (mkdir-p #$secrets-directory))
 
+          (chdir #$secrets-directory)
+          (symlink #$config-file (string-append #$secrets-directory "/.sops.yaml"))
+
           ;; Actually decrypt secrets
           (for-each
            (match-lambda
              ((key user group permissions path)
-              (let ((uid (passwd:uid user))
-                    (gid (passwd:gid group)))
-                (invoke #$extract-secret.sh key path file)
+              (let ((uid (passwd:uid
+                          (getpwnam user)))
+                    (gid (passwd:gid
+                          (getpwnam group))))
+                (invoke #$extract-secret.sh key path #$file)
                 (chown path uid gid)
                 (chmod path permissions))))
-           #$secrets)))))
+           (list #$@secrets))))))
 
 (define (secrets->sops-service-configuration config secrets)
   (sops-service-configuration
