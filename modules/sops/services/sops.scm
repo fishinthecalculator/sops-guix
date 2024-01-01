@@ -9,12 +9,13 @@
   #:use-module (guix packages)
   #:use-module (gnu packages gnupg)
   #:use-module (sops packages sops)
+  #:use-module (sops packages utils)
   #:use-module (srfi srfi-1)
   #:export (sops-secrets-service-type
 
             sops-secret
             sops-secret?
-            sops-secret-value
+            sops-secret-key
             sops-secret-user
             sops-secret-group
             sops-secret-permissions
@@ -23,16 +24,17 @@
             sops-service-configuration
             sops-service-configuration?
             sops-service-configuration-sops
+            sops-service-configuration-file
             sops-service-configuration-generate-key?
-            sops-service-configuration-decrypt-path
+            sops-service-configuration-secrets-directory
             sops-service-configuration-secrets
 
-            sops-service-configuration->shepherd-services))
+            %secrets-activation))
 
 (define-configuration/no-serialization sops-secret
-  (value
+  (key
    (gexp)
-   "A gexp evaluating to the SOPS secret file.")
+   "A string or a gexp evaluating to a key in the secrets file.")
   (user
    (string "root")
    "The user owner of the secret.")
@@ -47,7 +49,7 @@
    "The path on the root filesystem where the secret will be placed."))
 
 (define (lower-sops-secret secret)
-  #~'(#$(sops-secret-value secret)
+  #~'(#$(sops-secret-key secret)
       #$(sops-secret-user secret)
       #$(sops-secret-group secret)
       #$(sops-secret-permissions secret)
@@ -60,106 +62,67 @@
   (sops
    (package sops)
    "The @code{SOPS} package used to perform decryption.")
+  (file
+   (gexp)
+   "A gexp or file-like object evaluating to the secrets file.")
   (generate-key?
    (boolean #f)
    "When true a GPG key will be derived from the host SSH RSA key with
 @code{ssh-to-pgp} and added to the root keyring. It is discouraged and you are
 more than welcome to provide your own key in the root keyring.")
-  (decrypt-path
+  (secrets-directory
    (string "/run/secrets")
    "The path on the root filesystem where the secrets will be decrypted.")
   (secrets
    (list-of-sops-secrets '())
-   "The secrets file managed by the @code{sops-secrets-service-type}"))
+   "The @code{sops-secret} records managed by the @code{sops-secrets-service-type}."))
 
-(define (decrypt-program config)
-  (let* ((decrypt-path (sops-service-configuration-decrypt-path config))
+(define (%secrets-activation config)
+  "Return an activation gexp for system secrets."
+  (let* ((bash (file-append bash-minimal "/bin/bash"))
+         (extract-secret.sh
+          (file-append sops-guix-utils "/bin/extract-secret.sh"))
+         (file
+          (sops-service-configuration-file config))
+         (generate-key?
+          (sops-service-configuration-generate-key? config))
+         (generate-host-key.sh
+          (file-append sops-guix-utils "/bin/generate-host-key.sh"))
          (gpg (file-append gnupg "/bin/gpg"))
-         (grep (file-append grep "/bin/grep"))
-         (secrets (sops-service-configuration-secrets config))
-         (sops-command
-          (file-append (sops-service-configuration-sops config)
-                       "/bin/sops"))
-         (ssh-to-pgp (file-append ssh-to-pgp "/bin/ssh-to-pgp"))
-         (tail (file-append coreutils "/bin/tail")))
-    (program-file
-     "install-secrets.scm"
-     (with-imported-modules (source-module-closure
-                             '((guix build utils)))
-       #~(begin
-           (use-modules (guix build utils)
-                        (ice-9 popen)
-                        (ice-9 textual-ports)
-                        (srfi srfi-1))
+         (secrets
+          (map lower-sops-secret (sops-service-configuration-secrets config)))
+         (secrets-directory
+          (sops-service-configuration-secrets-directory config)))
+    #~(begin
+        (use-modules (guix build utils)
+                     (ice-9 match))
 
-           (define secret-value first)
-           (define secret-user second)
-           (define secret-group third)
-           (define secret-permissions fourth)
-           (define secret-path fifth)
+        (setenv "SOPS_GPG_EXEC" #$gpg)
 
-           (unless #$(> (length secrets) 0)
-                   (format #t "No secrets file configured, exiting.")
-                   (exit))
+        (if generate-key?
+            (invoke #$generate-host-key.sh)
+            (format #t "no host key will be generated...~%"))
 
-           (define sh-options '("-x" "-l"))
+        (format #t "setting up secrets in '~a'...~%" #$secrets-directory)
+        (if (file-exists? #$secrets-directory)
+            (for-each (compose delete-file
+                               (cut string-append #$secrets-directory "/" <>))
+                      (scandir secrets-directory
+                               (lambda (file)
+                                 (not (member file '("." ".."))))
+                               string<?))
+            (mkdir-p #$secrets-directory))
 
-           (define (sh-run command)
-             (apply invoke `("sh" ,@sh-options "-c" ,command)))
-
-           (when #$(sops-service-configuration-generate-key? config)
-                 (define (read-pipe command)
-                   (get-string-all
-                    (apply open-pipe* `(,OPEN_READ "sh" ,@sh-options "-c" ,command))))
-
-                 (define ssh-to-pgp-private-key
-                   (string-append
-                    #$ssh-to-pgp " "
-                    #$(string-join '("-comment" "'Imported from SSH'"
-                                     "-email" "root@localhost"
-                                     "-format" "armor"
-                                     "-name" "root")
-                                   " ")
-                    " -i /etc/ssh/ssh_host_rsa_key -private-key"))
-
-                 (define key-id
-                   (string-trim-both
-                    (read-pipe
-                     (string-append
-                      ssh-to-pgp-private-key " | "
-                      #$gpg " --import-options show-only --import |"
-                      #$grep " 'sec#' -A 1 | " #$tail " -1"))))
-
-                 (when (string-null?
-                        (read-pipe (string-append #$gpg " --list-keys | " #$grep " " key-id)))
-                   (sh-run ssh-to-pgp-private-key " | "
-                           #$gpg " --import")))
-
-           (mkdir-p #$decrypt-path)
-
-           (for-each
-            (lambda (secret)
-              (define secret-file
-                (string-append #$decrypt-path "/"))
-              (sh-run
-               (string-append "export SOPS_GPG_EXEC=" #$gpg "; "
-                              #$sops-command " -d " (secret-value secret) " > ")))
-
-            #$secrets))))))
-
-(define (sops-service-configuration->shepherd-services config)
-  (list
-   (shepherd-service (provision `(sops-secrets))
-                     (one-shot? #t)
-                     (documentation
-                      "This service decrypts and symlinks @code{SOPS} secrets.")
-                     (start
-                      #~(make-forkexec-constructor
-                         (list #$(decrypt-program config))
-                         #:user "root"
-                         #:group "root"))
-                     (stop
-                      #~(make-kill-destructor)))))
+        ;; Actually decrypt secrets
+        (for-each
+         (match-lambda
+           ((key user group permissions path)
+            (let ((uid (passwd:uid user))
+                  (gid (passwd:gid group)))
+              (invoke #$extract-secret.sh key path file)
+              (chown path uid gid)
+              (chmod path permissions))))
+         #$secrets))))
 
 (define (secrets->sops-service-configuration config secrets)
   (sops-service-configuration
@@ -172,13 +135,13 @@ more than welcome to provide your own key in the root keyring.")
 (define sops-secrets-service-type
   (service-type (name 'sops-secrets)
                 (extensions (list (service-extension profile-service-type
-                                                     (lambda _ (list gnupg sops)))
-                                  (service-extension shepherd-root-service-type
-                                                     sops-service-configuration->shepherd-services)))
+                                                     (lambda _ (list gnupg sops-guix-utils)))
+                                  (service-extension activation-service-type
+                                                     %secrets-activation)))
                 (default-value (sops-service-configuration))
                 (compose concatenate)
                 (extend secrets->sops-service-configuration)
                 (description
-                 "This service runs at system activation, it's duty is to
+                 "This service runs at system activation, its duty is to
 decrypt @code{SOPS} secrets and place them at their place with the right
 permissions.")))
