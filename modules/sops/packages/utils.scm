@@ -19,13 +19,19 @@
 (define %source-dir
   (string-append (current-source-directory) "/bin"))
 
+;; From https://guix.gnu.org/en/blog/2023/from-development-environments-to-continuous-integrationthe-ultimate-guide-to-software-development-with-guix/
+(define vcs-file?
+  ;; Return true if the given file is under version control.
+  (or (git-predicate %source-dir)
+      (const #t)))                                ;not in a Git checkout
+
 (define-public sops-guix-utils
   (package
     (name "sops-guix-utils")
     (version "0.0.0-0")
-    (source (local-file %source-dir
+    (source (local-file %source-dir "sops-guix-utils-checkout"
                         #:recursive? #t
-                        #:select? (git-predicate %source-dir)))
+                        #:select? vcs-file?))
     (build-system copy-build-system)
     (arguments
      (list
