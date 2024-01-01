@@ -31,6 +31,9 @@
 
             %secrets-activation))
 
+(define (string-or-gexp? value)
+  (or (string? value) (gexp? value)))
+
 (define-configuration/no-serialization sops-secret
   (key
    (string-or-gexp)
