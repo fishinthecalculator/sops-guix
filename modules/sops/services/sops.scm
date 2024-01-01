@@ -16,6 +16,7 @@
 
             sops-secret
             sops-secret?
+            sops-secret-file
             sops-secret-key
             sops-secret-user
             sops-secret-group
@@ -26,7 +27,6 @@
             sops-service-configuration?
             sops-service-configuration-sops
             sops-service-configuration-config
-            sops-service-configuration-file
             sops-service-configuration-generate-key?
             sops-service-configuration-gnupg-home
             sops-service-configuration-secrets-directory
@@ -56,6 +56,9 @@ but ~a was found")
   (key
    (string-or-gexp)
    "A string or a gexp evaluating to a key in the secrets file.")
+  (file
+   (gexp-or-file-like)
+   "A gexp or file-like object evaluating to the secrets file.")
   (user
    (string "root")
    "The user owner of the secret.")
@@ -71,6 +74,7 @@ but ~a was found")
 
 (define (lower-sops-secret secret)
   #~'(#$(sops-secret-key secret)
+      #$(sops-secret-file secret)
       #$(sops-secret-user secret)
       #$(sops-secret-group secret)
       #$(sops-secret-permissions secret)
@@ -86,9 +90,6 @@ but ~a was found")
   (config
    (gexp-or-file-like)
    "A gexp or file-like object evaluating to the SOPS config file.")
-  (file
-   (gexp-or-file-like)
-   "A gexp or file-like object evaluating to the secrets file.")
   (generate-key?
    (boolean #f)
    "When true a GPG key will be derived from the host SSH RSA key with
@@ -113,8 +114,6 @@ more than welcome to provide your own key in the keyring.")
             (sops-service-configuration-config config))
            (extract-secret.sh
             (file-append sops-guix-utils "/bin/extract-secret.sh"))
-           (file
-            (sops-service-configuration-file config))
            (generate-key?
             (sops-service-configuration-generate-key? config))
            (generate-host-key.sh
@@ -154,12 +153,12 @@ more than welcome to provide your own key in the keyring.")
           ;; Actually decrypt secrets
           (for-each
            (match-lambda
-             ((key user group permissions path)
+             ((key file user group permissions path)
               (let ((uid (passwd:uid
                           (getpwnam user)))
-                    (gid (passwd:gid
-                          (getpwnam group))))
-                (invoke #$extract-secret.sh key path #$file)
+                    (gid (passwd:uid
+                          (getgrnam group))))
+                (invoke #$extract-secret.sh key path file)
                 (chown path uid gid)
                 (chmod path permissions))))
            (list #$@secrets))))))
