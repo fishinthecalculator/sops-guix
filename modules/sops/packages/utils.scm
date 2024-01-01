@@ -16,59 +16,59 @@
   #:use-module (sops packages sops-nix)
   #:use-module (ice-9 match))
 
-(define-public sops-guix-utils
-  (let ((version "0.0.0")
-        (revision "0")
-        (commit "f308b623eac7b89e22cbed7aa7e34f4265ab399f"))
-    (package
-      (name "sops-guix-utils")
-      (version (git-version version revision commit))
-      (source
-       (origin
-         (method git-fetch)
-         (uri (git-reference
-               (url "https://git.sr.ht/~fishinthecalculator/sops-guix")
-               (commit commit)))
-         (file-name (git-file-name name version))
-         (sha256
-          (base32 "016jkrvmbhglvay3adjr7wj33bjf66vkavzkkhkw35mpahafzh0i"))))
-      (build-system copy-build-system)
-      (arguments
-       (list
-        ;; There's no point in substitutes.
-        #:substitutable? #f
-        #:install-plan
-        #~'(("modules/sops/packages/bin/generate-host-key.sh" "/bin/generate-host-key.sh")
-            ("modules/sops/packages/bin/extract-secret.sh" "/bin/extract-secret.sh"))
-        #:phases
-        #~(modify-phases %standard-phases
-            (add-after 'install 'wrap
-              (lambda* (#:key inputs #:allow-other-keys)
-                (let ((bin (string-append #$output "/bin"))
-                      (bin-directories
-                       (search-path-as-list '("bin" "sbin" "libexec")
-                                            (map cdr inputs))))
+(define %source-dir
+  (string-append (current-source-directory) "/bin"))
 
-                  (for-each
-                   (lambda (entrypoint)
-                     (chmod entrypoint #o555)
-                     (wrap-program entrypoint
-                      `("PATH" ":" prefix
-                        (,(string-join
-                           (append
-                            bin-directories
-                            (list bin))
-                           ":")))))
-                   (find-files bin))))))))
-      (inputs
-       (list bash-minimal
-             coreutils
-             grep
-             gnupg
-             sops
-             ssh-to-pgp))
-      (synopsis "Utilities for deploying secrets")
-      (description "This package bundles a set of scripts required to facilitate
+;; From https://guix.gnu.org/en/blog/2023/from-development-environments-to-continuous-integrationthe-ultimate-guide-to-software-development-with-guix/
+(define vcs-file?
+  ;; Return true if the given file is under version control.
+  (or (git-predicate %source-dir)
+      (const #t)))                                ;not in a Git checkout
+
+(define-public sops-guix-utils
+  (package
+    (name "sops-guix-utils")
+    (version "0.0.0-0")
+    (source (local-file %source-dir "sops-guix-utils-checkout"
+                        #:recursive? #t
+                        #:select? vcs-file?))
+    (build-system copy-build-system)
+    (arguments
+     (list
+      ;; There's no point in substitutes.
+      #:substitutable? #f
+      #:install-plan
+      #~'(("generate-host-key.sh" "/bin/generate-host-key.sh")
+          ("extract-secret.sh" "/bin/extract-secret.sh"))
+      #:phases
+      #~(modify-phases %standard-phases
+          (add-after 'install 'wrap
+            (lambda* (#:key inputs #:allow-other-keys)
+              (let ((bin (string-append #$output "/bin"))
+                    (bin-directories
+                     (search-path-as-list '("bin" "sbin" "libexec")
+                                          (map cdr inputs))))
+
+                (for-each
+                 (lambda (entrypoint)
+                   (chmod entrypoint #o555)
+                   (wrap-program entrypoint
+                    `("PATH" ":" prefix
+                      (,(string-join
+                         (append
+                          bin-directories
+                          (list bin))
+                         ":")))))
+                 (find-files bin))))))))
+    (inputs
+     (list bash-minimal
+           coreutils
+           grep
+           gnupg
+           sops
+           ssh-to-pgp))
+    (synopsis "Utilities for deploying secrets")
+    (description "This package bundles a set of scripts required to facilitate
 the deploying of SOPS Guix secrets.")
-      (home-page "https://sr.ht/~fishinthecalculator/sops-guix/")
-      (license license:gpl3))))
+    (home-page "https://sr.ht/~fishinthecalculator/sops-guix/")
+    (license license:gpl3)))
