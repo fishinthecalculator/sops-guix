@@ -10,14 +10,13 @@ ssh-to-pgp-private-key () {
                -i /etc/ssh/ssh_host_rsa_key -private-key 2>/dev/null
 }
 
-key_id="$(ssh-to-pgp-private-key | \
-                gpg --import-options show-only --import | \
-                grep -E -A 1 'sec(#)?' | tail -1 2>&1)"
-
-export key_id
+key="$(ssh-to-pgp-private-key)"
+key_id="$(echo "${key}" | \
+          gpg --import-options show-only --import | \
+          grep -E -A 1 'sec(#)?' | tail -1)"
 
 if gpg --list-keys | grep -i -q "$key_id"; then
     echo "${key_id} already known, skipping import..."
 else
-    ssh-to-pgp-private-key | gpg --import
+    echo "${key}" | gpg --import
 fi

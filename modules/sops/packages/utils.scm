@@ -45,6 +45,8 @@
           (add-after 'install 'wrap
             (lambda* (#:key inputs #:allow-other-keys)
               (let ((bin (string-append #$output "/bin"))
+                    (sops (string-append #$sops "/bin/sops"))
+                    (ssh-to-pgp (string-append #$ssh-to-pgp "/bin/ssh-to-pgp"))
                     (bin-directories
                      (search-path-as-list '("bin" "sbin" "libexec")
                                           (map cdr inputs))))
@@ -52,6 +54,10 @@
                 (for-each
                  (lambda (entrypoint)
                    (chmod entrypoint #o555)
+                   (substitute* entrypoint
+                     (("ssh-to-pgp ")
+                      (string-append ssh-to-pgp " "))
+                     (("sops") sops))
                    (wrap-program entrypoint
                     `("PATH" ":" prefix
                       (,(string-join
