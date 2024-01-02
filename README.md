@@ -1,5 +1,7 @@
 # SOPS Guix
 
+[![builds.sr.ht status](https://builds.sr.ht/~fishinthecalculator/sops-guix/commits/main/.build.yml.svg)](https://builds.sr.ht/~fishinthecalculator/sops-guix/commits/main/.build.yml?)
+
 This project aims at implementing secure deploying of secrets with Guix and [SOPS](https://getsops.io).
 
 ## Secure secret management with Guix
