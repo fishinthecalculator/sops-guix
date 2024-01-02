@@ -198,7 +198,7 @@ more than welcome to provide your own key in the keyring.")
     (map
      (match-lambda
        ((key path)
-        `(,path . ,(key->file-name key))))
+        `(,path ,(key->file-name key))))
      paths)))
 
 (define (secrets->sops-service-configuration config secrets)
