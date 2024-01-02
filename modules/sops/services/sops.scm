@@ -1,18 +1,26 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-;;; Copyright © 2023 Giacomo Leidi <goodoldpaul@autistici.org>
+;;; Copyright © 2023-2024 Giacomo Leidi <goodoldpaul@autistici.org>
 
 (define-module (sops services sops)
   #:use-module (gnu services)
   #:use-module (gnu services configuration)
   #:use-module (gnu services shepherd)
+  #:use-module (guix diagnostics)
   #:use-module (guix gexp)
+  #:use-module (guix i18n)
   #:use-module (guix packages)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages gnupg)
   #:use-module (sops packages sops)
   #:use-module (sops packages utils)
+  #:use-module (ice-9 match)
+  #:use-module (ice-9 regex)
+  #:use-module (ice-9 string-fun)
   #:use-module (srfi srfi-1)
   #:export (sops-secrets-service-type
+
+            sanitize-sops-key
+            key->file-name
 
             sops-secret
             sops-secret?
@@ -32,16 +40,8 @@
             sops-service-configuration-secrets-directory
             sops-service-configuration-secrets
 
+            %secrets-extra-files
             %secrets-activation))
-
-(define (string-or-gexp? value)
-  (if (or (string? value) (gexp? value))
-      value
-      (raise
-       (formatted-message
-        (G_ "key field value must contain only strings or gexps,
-but ~a was found")
-        value))))
 
 (define (gexp-or-file-like? value)
   (if (or (file-like? value) (gexp? value))
@@ -52,10 +52,34 @@ but ~a was found")
 but ~a was found")
         value))))
 
+(define (serialize-string name value)
+  value)
+
+(define (sanitize-sops-key value)
+  (if (and (string? value)
+           (string-match "^(\\[(\".*\"|[0-9]+)\\])+$" value))
+      value
+      (raise
+       (formatted-message
+        (G_ "key field value must follow Python's dictionary syntax, but ~a was found.~%~%Please refer to the SOPS documentation to make sure of the actual syntax,
+or if you are really it's a bug in SOPS Guix make sure to report it at https://todo.sr.ht/~fishinthecalculator/sops-guix .")
+        value))))
+
+(define (key->file-name key)
+  (string-join
+   (map (lambda (sub-key) (string-replace-substring sub-key "[" ""))
+        (filter (compose not string-null?)
+                (string-split
+                 (string-replace-substring key "\"" "") #\])))
+   "-"))
+
+(define-maybe string)
+
 (define-configuration/no-serialization sops-secret
   (key
-   (string-or-gexp)
-   "A string or a gexp evaluating to a key in the secrets file.")
+   (string)
+   "A key representing a value in the secrets file."
+   (sanitizer sanitize-sops-key))
   (file
    (gexp-or-file-like)
    "A gexp or file-like object evaluating to the secrets file.")
@@ -69,8 +93,8 @@ but ~a was found")
    (number #o440)
    "@code{chmod} permissions that will be applied to the secret.")
   (path
-   (string)
-   "The path on the root filesystem where the secret will be placed."))
+   (maybe-string)
+   "An optional path on the root filesystem where the secret will be placed."))
 
 (define (lower-sops-secret secret)
   #~'(#$(sops-secret-key secret)
@@ -78,7 +102,7 @@ but ~a was found")
       #$(sops-secret-user secret)
       #$(sops-secret-group secret)
       #$(sops-secret-permissions secret)
-      #$(sops-secret-path secret)))
+      #$(key->file-name (sops-secret-key secret))))
 
 (define list-of-sops-secrets?
   (list-of sops-secret?))
@@ -158,10 +182,24 @@ more than welcome to provide your own key in the keyring.")
                           (getpwnam user)))
                     (gid (passwd:uid
                           (getgrnam group))))
-                (invoke #$extract-secret.sh key path file)
+                (invoke #$extract-secret.sh key (string-append #$secrets-directory "/" path) file)
                 (chown path uid gid)
                 (chmod path permissions))))
            (list #$@secrets))))))
+
+(define (%secrets-extra-files config)
+  (let ((paths
+         (map
+          (lambda (secret)
+            (list (sops-secret-key secret)
+                  (sops-secret-path secret)))
+          (filter (compose maybe-value-set? sops-secret-path)
+                  (sops-service-configuration-secrets config)))))
+    (map
+     (match-lambda
+       ((key path)
+        `(,path . ,(key->file-name key))))
+     paths)))
 
 (define (secrets->sops-service-configuration config secrets)
   (sops-service-configuration
@@ -175,6 +213,8 @@ more than welcome to provide your own key in the keyring.")
   (service-type (name 'sops-secrets)
                 (extensions (list (service-extension profile-service-type
                                                      (lambda _ (list gnupg sops-guix-utils)))
+                                  (service-extension special-files-service-type
+                                                     %secrets-extra-files)
                                   (service-extension activation-service-type
                                                      %secrets-activation)))
                 (default-value #f)

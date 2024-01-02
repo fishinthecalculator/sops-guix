@@ -1,0 +1,7 @@
+image: guix
+environment:
+  repo: sops-guix
+tasks:
+  - unit-test-latest: |
+      cd $repo
+      guix shell make -- make check
