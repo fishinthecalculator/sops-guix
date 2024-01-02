@@ -108,9 +108,9 @@ Upon reconfiguration, this will yield the following content at `/run/secrets`:
 ``` bash
 sudo ls -la /run/secrets/
 total 12
-drwxr-xr-x 1 root root  50 Jan  2 12:44 .
-drwxr-xr-x 1 root root 254 Jan  2 12:44 ..
-lrwxrwxrwx 1 root root  53 Jan  2 12:44 .sops.yaml -> /gnu/store/lyhyh91jw2n2asa1w0fc0zmv93yxkxip-sops.yaml
+drwxr-xr-x 1 root root   50 Jan  2 12:44 .
+drwxr-xr-x 1 root root  254 Jan  2 12:44 ..
+lrwxrwxrwx 1 root root   53 Jan  2 12:44 .sops.yaml -> /gnu/store/lyhyh91jw2n2asa1w0fc0zmv93yxkxip-sops.yaml
 -r-------- 1 paul users  44 Jan  2 12:44 wireguard
 ```
 
