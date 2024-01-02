@@ -47,6 +47,23 @@ wireguard:
 
 after saving and closing the file you can see that `sops` encrypted it before saving it, so you are free to check it in your VCS.
 
+### Making sure the right host keys are in the root GnuPG keyring
+
+For hosts to be able to decrypt secrets you need to provide in the `root` user keyring (or anyway the keyring located at the configured `gnupg-homedir`) the keys you defined in your `.sops.yaml`. So based on the above example you'd need to provide `8C3E4F6EB38828939029AE7BE9B6AF0CD39DD935`'s private key on `host1` and `ZZ3E4VREB38800039029AE7BE9B6AF0CD39AALH9`'s private key on `host2` .
+
+To check that your key is correctly imported into the keyring run:
+
+``` bash
+paul@host1:~ $ sudo gpg --list-keys 
+/root/.gnupg/pubring.kbx
+------------------------
+pub   rsa3072 1970-01-01 [SCE]
+      8C3E4F6EB38828939029AE7BE9B6AF0CD39DD935
+uid           [ unknown] root (Imported from SSH) <root@localhost>
+```
+
+By setting `generate-key?` to `#t` in `sops-service-configuration` a GPG key will be automatically derived for you from your system's `/etc/ssh/ssh_host_rsa_key` and added to the configured keyring. It is *discouraged* to do so and you are more than encouraged to autonomally provide a key in your configured keyring.
+
 ### Adding secrets to your `operationg-system` record
 
 Now, supposing you have your `operating-system` file in the same directory where you have your `.sops.yaml` and `common.yaml` files, you can simply add the following to your configuration:
@@ -72,6 +89,8 @@ Now, supposing you have your `operating-system` file in the same directory where
        [...]
        (service sops-secrets-service-type
                 (sops-service-configuration
+                  (gnupg-homedir "/mnt/.gnupg")
+                  (generate-key? #t)
                   (config sops.yaml)
                   (secrets
                     (list
