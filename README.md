@@ -54,7 +54,7 @@ For hosts to be able to decrypt secrets you need to provide in the `root` user k
 To check that your key is correctly imported into the keyring run:
 
 ``` bash
-paul@host1:~ $ sudo gpg --list-keys 
+user1@host1:~ $ sudo gpg --list-keys
 /root/.gnupg/pubring.kbx
 ------------------------
 pub   rsa3072 1970-01-01 [SCE]
@@ -97,7 +97,7 @@ Now, supposing you have your `operating-system` file in the same directory where
                       (sops-secret
                         (key "[\"wireguard\"][\"private\"]")
                         (file common.yaml)
-                        (user "paul")
+                        (user "user1")
                         (group "users")
                         (permissions #o400)
                         (path "/run/secrets/wireguard")))))))))
@@ -106,12 +106,14 @@ Now, supposing you have your `operating-system` file in the same directory where
 Upon reconfiguration, this will yield the following content at `/run/secrets`:
 
 ``` bash
-sudo ls -la /run/secrets/
+user1@host1:~ $ sudo ls -la /run/secrets/
 total 12
-drwxr-xr-x 1 root root   50 Jan  2 12:44 .
-drwxr-xr-x 1 root root  254 Jan  2 12:44 ..
-lrwxrwxrwx 1 root root   53 Jan  2 12:44 .sops.yaml -> /gnu/store/lyhyh91jw2n2asa1w0fc0zmv93yxkxip-sops.yaml
--r-------- 1 paul users  44 Jan  2 12:44 wireguard
+drwxr-xr-x 1 root root    50 Jan  2 12:44 .
+drwxr-xr-x 1 root root   254 Jan  2 12:44 ..
+lrwxrwxrwx 1 root root    53 Jan  2 12:44 .sops.yaml -> /gnu/store/lyhyh91jw2n2asa1w0fc0zmv93yxkxip-sops.yaml
+-r-------- 1 user1 users  44 Jan  2 12:44 wireguard
+user1@host1:~ $ cat /run/secrets/wireguard
+MYPRIVATEKEY
 ```
 
 ## Configure
