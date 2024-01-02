@@ -29,10 +29,10 @@ do
 	# thus there are no signatures to be verified.
 	if [ "$local_hash" != $z40 ]
 	then
-		# Only use the hook when pushing to Gitlab.
+		# Only use the hook when pushing to Sourcehut.
 		case "$2" in
-		    *.gitlab.com*)
-			exec make authenticate
+		    *.sr.ht*)
+			exec guix shell make -- make authenticate
 			exit 127
 			;;
 		    *)
