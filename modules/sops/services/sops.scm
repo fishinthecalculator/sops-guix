@@ -185,7 +185,7 @@ more than welcome to provide your own key in the keyring.")
                    (lambda (link)
                      (define link-path (string-append #$extra-links-directory "/" link))
                      (define link-target (readlink link-path))
-                     ;; The user may have manually delete the target.
+                     ;; The user may have manually deleted the target.
                      (when (file-exists? link-target)
                        (format #t "Deleting ~a -> ~a...~%" link-path link-target)
                        (delete-file-recursively link-target)))
