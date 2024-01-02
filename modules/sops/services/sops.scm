@@ -180,18 +180,19 @@ more than welcome to provide your own key in the keyring.")
           (if (file-exists? #$secrets-directory)
               (begin
                 ;; Cleanup secrets symlink
-                (if (file-exists? #$extra-links-directory)
-                    (for-each
-                     (lambda (link)
-                       (delete-file (readlink link))
-                       (delete-file link))
-                     (list-content #$extra-links-directory))
-                    (mkdir-p #$extra-links-directory))
+                (when (file-exists? #$extra-links-directory)
+                  (for-each
+                   (lambda (link)
+                     (define link-path (string-append #$extra-links-directory "/" link))
+                     (define link-target (readlink link-path))
+                     (format #t "Deleting ~a -> ~a...~%" link-path link-target)
+                     (delete-file-recursively link-target))
+                   (list-content #$extra-links-directory)))
                 ;; Cleanup secrets
-                (for-each (compose delete-file
+                (for-each (compose delete-file-recursively
                                   (cut string-append #$secrets-directory "/" <>))
-                         (list-content #$secrets-directory #:exclude '("extra"))))
-              (mkdir-p #$extra-links-directory))
+                         (list-content #$secrets-directory)))
+              (mkdir-p #$secrets-directory))
 
           (chdir #$secrets-directory)
           (symlink #$config-file (string-append #$secrets-directory "/.sops.yaml"))
@@ -213,6 +214,9 @@ more than welcome to provide your own key in the keyring.")
                 (chmod file-name permissions)
                 (when path
                   (symlink file-name path)
+
+                  ;; Setup symlink for cleaning up
+                  (mkdir-p #$extra-links-directory)
                   (symlink path gc-link)))))
            (list #$@secrets))))))
 
