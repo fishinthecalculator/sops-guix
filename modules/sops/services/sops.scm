@@ -40,7 +40,6 @@
             sops-service-configuration-secrets-directory
             sops-service-configuration-secrets
 
-            %secrets-extra-files
             %secrets-activation))
 
 (define (gexp-or-file-like? value)
@@ -67,10 +66,12 @@ or if you are really it's a bug in SOPS Guix make sure to report it at https://t
 
 (define (key->file-name key)
   (string-join
-   (map (lambda (sub-key) (string-replace-substring sub-key "[" ""))
-        (filter (compose not string-null?)
-                (string-split
-                 (string-replace-substring key "\"" "") #\])))
+   (filter-map
+    (lambda (sub-key)
+      (and (not (string-null? sub-key))
+           (string-replace-substring sub-key "[" "")))
+    (string-split
+     (string-replace-substring key "\"" "") #\]))
    "-"))
 
 (define-maybe string)
@@ -97,12 +98,19 @@ or if you are really it's a bug in SOPS Guix make sure to report it at https://t
    "An optional path on the root filesystem where the secret will be placed."))
 
 (define (lower-sops-secret secret)
-  #~'(#$(sops-secret-key secret)
-      #$(sops-secret-file secret)
-      #$(sops-secret-user secret)
-      #$(sops-secret-group secret)
-      #$(sops-secret-permissions secret)
-      #$(key->file-name (sops-secret-key secret))))
+  (let* ((key (sops-secret-key secret))
+         (file-name
+          (key->file-name key))
+         (path (sops-secret-path secret)))
+    #~'(#$(sops-secret-key secret)
+        #$(sops-secret-file secret)
+        #$(sops-secret-user secret)
+        #$(sops-secret-group secret)
+        #$(sops-secret-permissions secret)
+        #$(and (maybe-value-set? path)
+               (not (string=? path file-name))
+               path)
+        #$file-name)))
 
 (define list-of-sops-secrets?
   (list-of sops-secret?))
@@ -148,11 +156,18 @@ more than welcome to provide your own key in the keyring.")
            (secrets
             (map lower-sops-secret (sops-service-configuration-secrets config)))
            (secrets-directory
-            (sops-service-configuration-secrets-directory config)))
+            (sops-service-configuration-secrets-directory config))
+           (extra-links-directory
+            (string-append secrets-directory "/extra")))
       #~(begin
           (use-modules (guix build utils)
                        (ice-9 ftw)
                        (ice-9 match))
+          (define* (list-content directory #:key (exclude '()))
+            (scandir directory
+                     (lambda (file)
+                       (not (member file `("." ".." ,@exclude))))
+                     string<?))
 
           (setenv "GNUPGHOME" #$gnupg-home)
           (setenv "SOPS_GPG_EXEC" #$gpg)
@@ -163,13 +178,20 @@ more than welcome to provide your own key in the keyring.")
 
           (format #t "setting up secrets in '~a'...~%" #$secrets-directory)
           (if (file-exists? #$secrets-directory)
-              (for-each (compose delete-file
-                                 (cut string-append #$secrets-directory "/" <>))
-                        (scandir #$secrets-directory
-                                 (lambda (file)
-                                   (not (member file '("." ".."))))
-                                 string<?))
-              (mkdir-p #$secrets-directory))
+              (begin
+                ;; Cleanup secrets symlink
+                (if (file-exists? #$extra-links-directory)
+                    (for-each
+                     (lambda (link)
+                       (delete-file (readlink link))
+                       (delete-file link))
+                     (list-content #$extra-links-directory))
+                    (mkdir-p #$extra-links-directory))
+                ;; Cleanup secrets
+                (for-each (compose delete-file
+                                  (cut string-append #$secrets-directory "/" <>))
+                         (list-content #$secrets-directory #:exclude '("extra"))))
+              (mkdir-p #$extra-links-directory))
 
           (chdir #$secrets-directory)
           (symlink #$config-file (string-append #$secrets-directory "/.sops.yaml"))
@@ -177,29 +199,22 @@ more than welcome to provide your own key in the keyring.")
           ;; Actually decrypt secrets
           (for-each
            (match-lambda
-             ((key file user group permissions path)
-              (let ((uid (passwd:uid
+             ((key file user group permissions path derived-name)
+              (let ((file-name
+                     (string-append #$secrets-directory "/" derived-name))
+                    (gc-link
+                     (string-append #$extra-links-directory "/" derived-name))
+                    (uid (passwd:uid
                           (getpwnam user)))
                     (gid (passwd:uid
                           (getgrnam group))))
-                (invoke #$extract-secret.sh key (string-append #$secrets-directory "/" path) file)
-                (chown path uid gid)
-                (chmod path permissions))))
+                (invoke #$extract-secret.sh key file-name file)
+                (chown file-name uid gid)
+                (chmod file-name permissions)
+                (when path
+                  (symlink file-name path)
+                  (symlink path gc-link)))))
            (list #$@secrets))))))
-
-(define (%secrets-extra-files config)
-  (let ((paths
-         (map
-          (lambda (secret)
-            (list (sops-secret-key secret)
-                  (sops-secret-path secret)))
-          (filter (compose maybe-value-set? sops-secret-path)
-                  (sops-service-configuration-secrets config)))))
-    (map
-     (match-lambda
-       ((key path)
-        `(,path ,(key->file-name key))))
-     paths)))
 
 (define (secrets->sops-service-configuration config secrets)
   (sops-service-configuration
@@ -213,8 +228,6 @@ more than welcome to provide your own key in the keyring.")
   (service-type (name 'sops-secrets)
                 (extensions (list (service-extension profile-service-type
                                                      (lambda _ (list gnupg sops-guix-utils)))
-                                  (service-extension special-files-service-type
-                                                     %secrets-extra-files)
                                   (service-extension activation-service-type
                                                      %secrets-activation)))
                 (default-value #f)
