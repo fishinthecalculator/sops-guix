@@ -185,8 +185,10 @@ more than welcome to provide your own key in the keyring.")
                    (lambda (link)
                      (define link-path (string-append #$extra-links-directory "/" link))
                      (define link-target (readlink link-path))
-                     (format #t "Deleting ~a -> ~a...~%" link-path link-target)
-                     (delete-file-recursively link-target))
+                     ;; The user may have manually delete the target.
+                     (when (file-exists? link-target)
+                       (format #t "Deleting ~a -> ~a...~%" link-path link-target)
+                       (delete-file-recursively link-target)))
                    (list-content #$extra-links-directory)))
                 ;; Cleanup secrets
                 (for-each (compose delete-file-recursively
@@ -209,9 +211,11 @@ more than welcome to provide your own key in the keyring.")
                           (getpwnam user)))
                     (gid (passwd:uid
                           (getgrnam group))))
+
                 (invoke #$extract-secret.sh key file-name file)
                 (chown file-name uid gid)
                 (chmod file-name permissions)
+
                 (when path
                   (symlink file-name path)
 
