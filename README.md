@@ -1,6 +1,6 @@
 # SOPS Guix
 
- This project aims at implementing secure deploying of secrets with Guix and SOPS.
+This project aims at implementing secure deploying of secrets with Guix and [SOPS](https://getsops.io).
 
 ## Secure secret management with Guix
 
