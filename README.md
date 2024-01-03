@@ -10,7 +10,7 @@ This channels exposes the `sops-secrets-service-type` Guix service and the `sops
 
 ### Creating secrets with SOPS
 
-First of all you need to create a suitable `.sops.yaml` file that you will place in your project's root directory. In this file you define which keys will be able to access your secrets files, it may very well be something like:
+First of all you need to create a suitable `.sops.yaml` file that you will place in your project's root directory, or anyway in the same directory where you keep your system configuration. In this file you define which keys will be able to access your secrets files, it may very well be something like:
 
 ``` yaml
 keys:
@@ -49,14 +49,14 @@ wireguard:
 
 after saving and closing the file you can see that `sops` encrypted it before saving it, so you are free to check it in your VCS.
 
-### Making sure the right host keys are in the root GnuPG keyring
+### Making sure the right host keys are in the configured GnuPG keyring
 
 For hosts to be able to decrypt secrets you need to provide in the `root` user keyring (or anyway the keyring located at the configured `gnupg-homedir`) the keys you defined in your `.sops.yaml`. So based on the above example you'd need to provide `8C3E4F6EB38828939029AE7BE9B6AF0CD39DD935`'s private key on `host1` and `ZZ3E4VREB38800039029AE7BE9B6AF0CD39AALH9`'s private key on `host2` .
 
 To check that your key is correctly imported into the keyring run:
 
 ``` bash
-user1@host1:~ $ sudo gpg --list-keys
+user1@host1:~ $ sudo gpg --list-secret-keys
 /root/.gnupg/pubring.kbx
 ------------------------
 pub   rsa3072 1970-01-01 [SCE]
@@ -79,6 +79,8 @@ Now, supposing you have your `operating-system` file in the same directory where
 
 (define sops.yaml
   (local-file (string-append root "/.sops.yaml")
+              ;; This is because paths on the store
+              ;; can not start with dots.
               "sops.yaml"))
 
 (define common.yaml
@@ -101,8 +103,7 @@ Now, supposing you have your `operating-system` file in the same directory where
                         (file common.yaml)
                         (user "user1")
                         (group "users")
-                        (permissions #o400)
-                        (path "/run/secrets/wireguard")))))))))
+                        (permissions #o400)))))))))
 ```
 
 Upon reconfiguration, this will yield the following content at `/run/secrets`:
@@ -113,8 +114,8 @@ total 12
 drwxr-xr-x 1 root root    50 Jan  2 12:44 .
 drwxr-xr-x 1 root root   254 Jan  2 12:44 ..
 lrwxrwxrwx 1 root root    53 Jan  2 12:44 .sops.yaml -> /gnu/store/lyhyh91jw2n2asa1w0fc0zmv93yxkxip-sops.yaml
--r-------- 1 user1 users  44 Jan  2 12:44 wireguard
-user1@host1:~ $ cat /run/secrets/wireguard
+-r-------- 1 user1 users  44 Jan  2 12:44 wireguard-private
+user1@host1:~ $ cat /run/secrets/wireguard-private
 MYPRIVATEKEY
 ```
 
