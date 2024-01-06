@@ -217,9 +217,11 @@ more than welcome to provide your own key in the keyring.")
                 (chmod file-name permissions)
 
                 (when path
+                  ;; First try to setup the symlink
                   (symlink file-name path)
 
-                  ;; Setup symlink for cleaning up
+                  ;; If everything goes well, setup symlink for
+                  ;; cleaning up
                   (mkdir-p #$extra-links-directory)
                   (symlink path gc-link)))))
            (list #$@secrets))))))
