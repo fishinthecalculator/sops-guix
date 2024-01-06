@@ -235,7 +235,9 @@ more than welcome to provide your own key in the keyring.")
 (define sops-secrets-service-type
   (service-type (name 'sops-secrets)
                 (extensions (list (service-extension profile-service-type
-                                                     (lambda _ (list gnupg sops-guix-utils)))
+                                                     (lambda config
+                                                       (list age gnupg
+                                                             (sops-service-configuration-sops config))))
                                   (service-extension activation-service-type
                                                      %secrets-activation)))
                 (default-value #f)
