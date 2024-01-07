@@ -11,6 +11,7 @@
   #:use-module (guix packages)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages gnupg)
+  #:use-module (gnu packages golang)
   #:use-module (sops packages sops)
   #:use-module (sops packages utils)
   #:use-module (ice-9 match)
