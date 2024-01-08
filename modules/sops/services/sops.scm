@@ -55,7 +55,7 @@ but ~a was found")
 (define (serialize-string name value)
   value)
 
-(define (sanitize-sops-key value)
+(define (sanitize-sops-string-key value)
   (if (and (string? value)
            (string-match "^(\\[(\".*\"|[0-9]+)\\])+$" value))
       value
@@ -64,6 +64,38 @@ but ~a was found")
         (G_ "key field value must follow Python's dictionary syntax, but ~a was found.~%~%Please refer to the SOPS documentation to make sure of the actual syntax,
 or if you are really it's a bug in SOPS Guix make sure to report it at https://todo.sr.ht/~fishinthecalculator/sops-guix .")
         value))))
+
+(define (sanitize-sops-list-key value)
+  (if (every (lambda (key) (or string?
+                               (and (integer? value)
+                                    (>= value 0))))
+             value)
+      (apply string-append
+             (map (lambda (key)
+                    (format #f "[~a]" (if (number? key)
+                                          key
+                                          (format #f "\"~a\"" key))))
+                  value))
+      (raise
+       (formatted-message
+        (G_ "key field value must be a list of strings or positive integers, but ~a was found.~%")
+        value))))
+
+(define (sanitize-sops-key value)
+  (match value
+    ((? string? value)
+     (sanitize-sops-string-key value))
+    ((? list? value)
+     (sanitize-sops-list-key value))
+    (_
+      (raise
+       (formatted-message
+        (G_ "key field value must be either a string or a list, but ~a was found.~%")
+        value)))))
+
+(define (string-or-list? value)
+  (or (string? value)
+      (list? value)))
 
 (define (sanitize-output-type value)
   (if (not (maybe-value-set? value))
@@ -93,8 +125,10 @@ or if you are really it's a bug in SOPS Guix make sure to report it at https://t
 
 (define-configuration/no-serialization sops-secret
   (key
-   (string)
-   "A key representing a value in the secrets file."
+   (string-or-list)
+   "A key representing a value in the secrets file. Its value can be a string,
+which will be directly passed to @command{sops -d --extract} or a list of strings
+representing the path of the value you want to reference in the secrets file."
    (sanitizer sanitize-sops-key))
   (file
    (gexp-or-file-like)
@@ -245,13 +279,13 @@ more than welcome to provide your own key in the keyring.")
                                 ,@(if output-type
                                       `("--output-type" ,output-type)
                                       '())
-                                secrets-file))
-                (chown file-name uid gid)
-                (chmod file-name permissions)
+                                ,secrets-file))
+                (chown output uid gid)
+                (chmod output permissions)
 
                 (when path
                   ;; First try to setup the symlink
-                  (symlink file-name path)
+                  (symlink output path)
 
                   ;; If everything goes well, setup symlink for
                   ;; cleaning up
