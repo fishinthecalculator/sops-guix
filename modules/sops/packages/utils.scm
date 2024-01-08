@@ -38,8 +38,7 @@
       ;; There's no point in substitutes.
       #:substitutable? #f
       #:install-plan
-      #~'(("generate-host-key.sh" "/bin/generate-host-key.sh")
-          ("extract-secret.sh" "/bin/extract-secret.sh"))
+      #~'(("generate-host-key.sh" "/bin/generate-host-key.sh"))
       #:phases
       #~(modify-phases %standard-phases
           (add-after 'install 'wrap

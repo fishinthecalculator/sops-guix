@@ -65,6 +65,20 @@ but ~a was found")
 or if you are really it's a bug in SOPS Guix make sure to report it at https://todo.sr.ht/~fishinthecalculator/sops-guix .")
         value))))
 
+(define (sanitize-output-type value)
+  (if (not (maybe-value-set? value))
+      value
+      (if (and (string? value)
+               (member value '("json"
+                               "dotenv"
+                               "binary"
+                               "yaml")))
+          value
+          (raise
+           (formatted-message
+            (G_ "output-type field value must one of json, dotenv, binary or yaml but ~a was found.~%")
+            value)))))
+
 (define (key->file-name key)
   (string-join
    (filter-map
@@ -91,6 +105,11 @@ or if you are really it's a bug in SOPS Guix make sure to report it at https://t
   (group
    (string "root")
    "The group owner of the secret.")
+  (output-type
+   (maybe-string)
+   "Currently json, yaml, dotenv and binary are supported. If not set, sops will
+use the secrets file's extension to determine the output format."
+   (sanitizer sanitize-output-type))
   (permissions
    (number #o440)
    "@code{chmod} permissions that will be applied to the secret.")
@@ -98,16 +117,21 @@ or if you are really it's a bug in SOPS Guix make sure to report it at https://t
    (maybe-string)
    "An optional path on the root filesystem where the secret will be placed."))
 
+;; FIXME: This way of lowering secrets is not pretty.
 (define (lower-sops-secret secret)
   (let* ((key (sops-secret-key secret))
          (file-name
           (key->file-name key))
+         (output-type
+          (sops-secret-output-type secret))
          (path (sops-secret-path secret)))
     #~'(#$(sops-secret-key secret)
         #$(sops-secret-file secret)
         #$(sops-secret-user secret)
         #$(sops-secret-group secret)
         #$(sops-secret-permissions secret)
+        #$(and (maybe-value-set? output-type)
+               output-type)
         #$(and (maybe-value-set? path)
                (not (string=? path file-name))
                path)
@@ -145,8 +169,6 @@ more than welcome to provide your own key in the keyring.")
     (let* ((bash (file-append bash-minimal "/bin/bash"))
            (config-file
             (sops-service-configuration-config config))
-           (extract-secret.sh
-            (file-append sops-guix-utils "/bin/extract-secret.sh"))
            (generate-key?
             (sops-service-configuration-generate-key? config))
            (generate-host-key.sh
@@ -158,6 +180,10 @@ more than welcome to provide your own key in the keyring.")
             (map lower-sops-secret (sops-service-configuration-secrets config)))
            (secrets-directory
             (sops-service-configuration-secrets-directory config))
+           (sops
+            (file-append
+              (sops-service-configuration-sops config)
+              "/bin/sops"))
            (extra-links-directory
             (string-append secrets-directory "/extra")))
       #~(begin
@@ -203,8 +229,8 @@ more than welcome to provide your own key in the keyring.")
           ;; Actually decrypt secrets
           (for-each
            (match-lambda
-             ((key file user group permissions path derived-name)
-              (let ((file-name
+             ((key secrets-file user group permissions output-type path derived-name)
+              (let ((output
                      (string-append #$secrets-directory "/" derived-name))
                     (gc-link
                      (string-append #$extra-links-directory "/" derived-name))
@@ -213,7 +239,13 @@ more than welcome to provide your own key in the keyring.")
                     (gid (passwd:uid
                           (getgrnam group))))
 
-                (invoke #$extract-secret.sh key file-name file)
+                (apply invoke `(#$sops "-d"
+                                "--extract" ,key
+                                "--output" ,output
+                                ,@(if output-type
+                                      `("--output-type" ,output-type)
+                                      '())
+                                secrets-file))
                 (chown file-name uid gid)
                 (chmod file-name permissions)
 
