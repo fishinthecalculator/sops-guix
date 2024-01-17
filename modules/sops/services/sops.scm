@@ -149,7 +149,7 @@ use the secrets file's extension to determine the output format."
    "@code{chmod} permissions that will be applied to the secret.")
   (path
    (maybe-string)
-   "An optional path on the root filesystem where the secret will be placed."))
+   "An optional path on the filesystem where the secret will be symlinked."))
 
 ;; FIXME: This way of lowering secrets is not pretty.
 (define (lower-sops-secret secret)
@@ -280,7 +280,11 @@ more than welcome to provide your own key in the keyring.")
                                       `("--output-type" ,output-type)
                                       '())
                                 ,secrets-file))
-                (chown output uid gid)
+
+                ;; Setting owner is supported only in the system service
+                (when (string=? (getenv "UID") "0")
+                  (chown output uid gid))
+                ;; Permissions are supported regardless
                 (chmod output permissions)
 
                 (when path
