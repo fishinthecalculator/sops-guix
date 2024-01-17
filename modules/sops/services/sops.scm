@@ -192,12 +192,12 @@ more than welcome to provide your own key in the keyring.")
    "The homedir of GnuPG, i.e. where keys used to decrypt SOPS secrets will be looked for.")
   (secrets-directory
    (string "/run/secrets")
-   "The path on the root filesystem where the secrets will be decrypted.")
+   "The path on the filesystem where the secrets will be decrypted.")
   (secrets
    (list-of-sops-secrets '())
    "The @code{sops-secret} records managed by the @code{sops-secrets-service-type}."))
 
-(define (%secrets-activation config)
+(define (%system-secrets-activation config)
   "Return an activation gexp for system secrets."
   (when config
     (let* ((bash (file-append bash-minimal "/bin/bash"))
@@ -282,7 +282,7 @@ more than welcome to provide your own key in the keyring.")
                                 ,secrets-file))
 
                 ;; Setting owner is supported only in the system service
-                (when (string=? (getenv "UID") "0")
+                (when (= (getuid) 0)
                   (chown output uid gid))
                 ;; Permissions are supported regardless
                 (chmod output permissions)
@@ -312,7 +312,7 @@ more than welcome to provide your own key in the keyring.")
                                                        (list age gnupg
                                                              (sops-service-configuration-sops config))))
                                   (service-extension activation-service-type
-                                                     %secrets-activation)))
+                                                     %system-secrets-activation)))
                 (default-value #f)
                 (compose concatenate)
                 (extend secrets->sops-service-configuration)
