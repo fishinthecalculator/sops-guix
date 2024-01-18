@@ -16,6 +16,7 @@
 
             sops-secret
             sops-secret?
+            sops-secret-fields
             sops-secret-file
             sops-secret-key
             sops-secret-user
