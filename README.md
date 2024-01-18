@@ -71,7 +71,8 @@ By setting `generate-key?` to `#t` in `sops-service-configuration` a GPG key wil
 Now, supposing you have your `operating-system` file in the same directory where you have your `.sops.yaml` and `common.yaml` files, you can simply add the following to your configuration:
 
 ``` scheme
-(use-modules (sops services sops)
+(use-modules (sops secrets)
+             (sops services sops)
              (guix utils))
 
 (define project-root
