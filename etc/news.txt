@@ -1,0 +1,7 @@
+(channel-news
+  (version 0)
+  (entry (commit "c16373f4c1c6e414b5645ad269fa6c26b64559de")
+         (title (en "Move sops-secret record to (sops secrets).")
+                (it "Il record sops-secret è stato spostato nel modulo (sops secrets)."))
+         (body (en "The sops-secret record has been moved over to (sops secrets), hence this module must be imported everywhere some sops-secret related procedure has been used. Apologies for breaking configurations but this helped in a refactor to introduce a Guix Home service for SOPS secrets.")
+               (it "Il record sops-secret è stato spostato nel modulo (sops secrets), quindi il modulo va importato ovunque venga usata qualche procedura legata a sops-secret. Mi scuso per aver rotto le configurazioni ma è stato funzionale ad un refactor che abilita la possibilità di introdurre un servizio Guix Home per i SOPS secrets."))))
