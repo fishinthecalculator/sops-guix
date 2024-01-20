@@ -108,7 +108,7 @@ more than welcome to provide your own key in the keyring.")
                                                      (lambda (config)
                                                        (list age gnupg
                                                              (sops-service-configuration-sops config))))
-                                  (service-extension fstab-service-type
+                                  (service-extension file-system-service-type
                                                      %sops-secrets-file-system)
                                   (service-extension activation-service-type
                                                      (lambda (config)
