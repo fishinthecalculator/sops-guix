@@ -44,10 +44,10 @@
 (define (home-sops-secrets-shepherd-service config)
   (when config
     (let* ((config-file
-            (sops-service-configuration-config config))(gnupg-home
-            (sops-service-configuration-gnupg-home config))
-           (secrets (sops-service-configuration-secrets config))
-           (sops (sops-service-configuration-sops config)))
+            (home-sops-service-configuration-config config))(gnupg-home
+            (home-sops-service-configuration-gnupg-home config))
+           (secrets (home-sops-service-configuration-secrets config))
+           (sops (home-sops-service-configuration-sops config)))
       (list
        (shepherd-service (provision '(home-sops-secrets))
                          (requirement '())
