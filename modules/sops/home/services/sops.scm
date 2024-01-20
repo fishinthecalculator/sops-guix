@@ -82,7 +82,7 @@
                                   (service-extension home-activation-service-type
                                                      (lambda _
                                                        #~(begin
-                                                           (define secrets-directory (string-append "/run/user/" (getuid) "/secrets"))
+                                                           (define secrets-directory (string-append "/run/user/" (number->string (getuid)) "/secrets"))
                                                            (unless (file-exists? secrets-directory)
                                                              (mkdir-p secrets-directory)))))
                                   (service-extension home-shepherd-service-type
