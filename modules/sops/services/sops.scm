@@ -79,8 +79,8 @@ more than welcome to provide your own key in the keyring.")
                                               (activate-secrets config-file
                                                                 gnupg-home
                                                                 secrets
-                                                                secrets-directory
                                                                 sops
+                                                                #:secrets-directory secrets-directory
                                                                 #:generate-key? generate-key?)))))
                          (stop
                           #~(make-kill-destructor)))))))
