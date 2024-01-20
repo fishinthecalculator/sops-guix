@@ -1,5 +1,10 @@
 (channel-news
   (version 0)
+  (entry (commit "cde6fba1d35139156c20cb2d45987b1005e7ac51")
+         (title (en "Add Guix Home service.")
+                (it "Aggiunto servizio Guix Home."))
+         (body (en "A new userspace home-sops-secrets-service-type is added in the (sops home services sops) module, with some limitations with regard to the system one. Most notable ones are: it makes no sense to generate a GPG key so the option is not available and secrets are automatically decrypted to /run/user/$UID/secrets which is usually mounted on tmpfs.")
+               (it "Viene aggiunto un nuovo home-sops-secrets-service nel modulo (sops home services sops), con alcune limitazioni rispetto al servizio di sistema. Quelle degne di nota sono: non ha più senso generare la chiave GPG quindi l'opzione è stata rimossa e i secrets vengono automaticamente decrittati in /run/user/$UID/secrets che solitamente è montato su tmpfs.")))
   (entry (commit "d852182ac50639641bc2b8aa542c11215eb3ef01")
          (title (en "Make decryption happen from a Shepherd service inside a ramfs file-system.")
                 (it "I secrets vengono decrittati da un servizio Shepherd in un file system ramfs."))
