@@ -80,7 +80,7 @@
                                                      (lambda (config)
                                                        (list age gnupg
                                                              (home-sops-service-configuration-sops config))))
-                                  (service-extension activation-service-type
+                                  (service-extension home-activation-service-type
                                                      (lambda _
                                                        #~(begin
                                                            (define secrets-directory (string-append "/run/user/" (getuid) "/secrets"))
