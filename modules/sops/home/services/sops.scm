@@ -61,8 +61,7 @@
                                               (activate-secrets config-file
                                                                 gnupg-home
                                                                 secrets
-                                                                sops
-                                                                #:generate-key? generate-key?)))))
+                                                                sops)))))
                          (stop
                           #~(make-kill-destructor)))))))
 
