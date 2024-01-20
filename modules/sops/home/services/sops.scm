@@ -76,16 +76,21 @@
 
 (define home-sops-secrets-service-type
   (service-type (name 'home-sops-secrets)
-                     (extensions (list (service-extension home-profile-service-type
-                                                          (lambda (config)
-                                                            (list age gnupg
-                                                                  (home-sops-service-configuration-sops config))))
-                                       (service-extension home-shepherd-service-type
-                                                          home-sops-secrets-shepherd-service)))
-                     (default-value #f)
-                     (compose concatenate)
-                     (extend secrets->home-sops-service-configuration)
-                     (description
-                      "This service runs at system activation, its duty is to
-decrypt @code{SOPS} secrets and place them at their place with the right
-permissions.")))
+                (extensions (list (service-extension home-profile-service-type
+                                                     (lambda (config)
+                                                       (list age gnupg
+                                                             (home-sops-service-configuration-sops config))))
+                                  (service-extension activation-service-type
+                                                     (lambda _
+                                                       #~(begin
+                                                           (define secrets-directory (string-append "/run/user/" (getuid) "/secrets"))
+                                                           (unless (file-exists? secrets-directory)
+                                                             (mkdir-p secrets-directory)))))
+                                  (service-extension home-shepherd-service-type
+                                                     home-sops-secrets-shepherd-service)))
+                (default-value #f)
+                (compose concatenate)
+                (extend secrets->home-sops-service-configuration)
+                (description
+                 "This service runs at herd's startup, its duty is to
+decrypt @code{SOPS} secrets and place them at their place on tmpfs.")))

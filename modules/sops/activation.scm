@@ -34,7 +34,7 @@
           (define secrets-directory
             (if #$secrets-directory
                 #$secrets-directory
-                (string-append "/run/user/" (getuid))))
+                (string-append "/run/user/" (getuid) "/secrets")))
           (define extra-links-directory
             (string-append secrets-directory "/extra"))
           (define* (list-content directory #:key (exclude '()))
