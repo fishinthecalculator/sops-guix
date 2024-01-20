@@ -2,7 +2,9 @@
 ;;; Copyright © 2023-2024 Giacomo Leidi <goodoldpaul@autistici.org>
 
 (define-module (sops services sops)
+  #:use-module (gnu)
   #:use-module (gnu services)
+  #:use-module (gnu services base)
   #:use-module (gnu services configuration)
   #:use-module (gnu services shepherd)
   #:use-module (guix gexp)
@@ -52,7 +54,7 @@ more than welcome to provide your own key in the keyring.")
    (list-of-sops-secrets '())
    "The @code{sops-secret} records managed by the @code{sops-secrets-service-type}."))
 
-(define (%system-secrets-activation config)
+(define (sops-secrets-shepherd-service config)
   (when config
     (let* ((config-file
             (sops-service-configuration-config config))
@@ -64,12 +66,33 @@ more than welcome to provide your own key in the keyring.")
            (secrets-directory
             (sops-service-configuration-secrets-directory config))
            (sops (sops-service-configuration-sops config)))
-      (activate-secrets config-file
-                        gnupg-home
-                        secrets
-                        secrets-directory
-                        sops
-                        #:generate-key? generate-key?))))
+      (list
+       (shepherd-service (provision '(sops-secrets))
+                         (requirement '(file-systems))
+                         (one-shot? #t)
+                         (documentation
+                          "SOPS secrets decrypting service.")
+                         (start
+                          #~(make-forkexec-constructor
+                             (list
+                              #$(program-file "sops-secrets-entrypoint"
+                                              (activate-secrets config-file
+                                                                gnupg-home
+                                                                secrets
+                                                                secrets-directory
+                                                                sops
+                                                                #:generate-key? generate-key?)))))
+                         (stop
+                          #~(make-kill-destructor)))))))
+
+(define (%sops-secrets-file-system config)
+  (list
+   (file-system
+     (device "none")
+     (mount-point
+      (sops-service-configuration-secrets-directory config))
+     (type "ramfs")
+     (check? #f))))
 
 (define (secrets->sops-service-configuration config secrets)
   (sops-service-configuration
@@ -85,8 +108,17 @@ more than welcome to provide your own key in the keyring.")
                                                      (lambda (config)
                                                        (list age gnupg
                                                              (sops-service-configuration-sops config))))
+                                  (service-extension fstab-service-type
+                                                     %sops-secrets-file-system)
                                   (service-extension activation-service-type
-                                                     %system-secrets-activation)))
+                                                     (lambda (config)
+                                                       #~(begin
+                                                           (define secrets-directory
+                                                             #$(sops-service-configuration-secrets-directory config))
+                                                           (unless (file-exists? secrets-directory)
+                                                                   (mkdir-p secrets-directory)))))
+                                  (service-extension shepherd-root-service-type
+                                                     sops-secrets-shepherd-service)))
                 (default-value #f)
                 (compose concatenate)
                 (extend secrets->sops-service-configuration)
