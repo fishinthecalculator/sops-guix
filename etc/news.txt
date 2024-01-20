@@ -1,5 +1,10 @@
 (channel-news
   (version 0)
+  (entry (commit "d852182ac50639641bc2b8aa542c11215eb3ef01")
+         (title (en "Make decryption happen from a Shepherd service inside a ramfs file-system.")
+                (it "I secrets vengono decrittati da un servizio Shepherd in un file system ramfs."))
+         (body (en "Clear text secrets now never hit the disk. A ramfs filesystem is mounted at the configured secrets directory, and the activation happens inside a one shot Shepherd services. This means that from now on Shepherd services requiring secrets must require the sops-secrets service. To transition from the old activation method first reconfigure your system, delete the contents of your secrets directory (usually /run/secrets), and reboot your system.")
+               (it "I secret in chiaro ora non finiscono mai su disco. Viene montato un file system ramfs alla posizione configurata come secrets-directorty e l'attivazione avviene in un servizio Shepherd. Questo implica che ora i servizi Shepherd che necessitano di secrets devono richiedere la dipendenza sops-secret. Per migrare dal vecchio metodo di attivazione prima di tutto riconfigura il tuo sistema, cancella il contenuto della cartella secrets-directory e riavvia il sistema.")))
   (entry (commit "c16373f4c1c6e414b5645ad269fa6c26b64559de")
          (title (en "Move sops-secret record to (sops secrets).")
                 (it "Il record sops-secret è stato spostato nel modulo (sops secrets)."))
