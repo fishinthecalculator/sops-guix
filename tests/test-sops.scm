@@ -1,10 +1,10 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 ;;; Copyright © 2024 Giacomo Leidi <goodoldpaul@autistici.org>
 
-;; Test runner. This has been copied from guile-sparql.
+;; Test runner. This has been partly copied from guile-sparql.
 
 (define-module (test-sops)
-  #:use-module (sops services sops)
+  #:use-module (sops secrets)
   #:use-module (srfi srfi-64)
   #:use-module (ice-9 match)
   #:export (with-test-group))
