@@ -123,7 +123,7 @@ Now, supposing you have your `operating-system` file in the same directory where
                   (secrets
                     (list
                       (sops-secret
-                        (key "[\"wireguard\"][\"private\"]")
+                        (key '("wireguard" "private"))
                         (file common.yaml)
                         (user "user1")
                         (group "users")
@@ -182,7 +182,7 @@ Now, supposing you have your `home-environment` file in the same directory where
                   (secrets
                     (list
                       (sops-secret
-                        (key "[\"wireguard\"][\"private\"]")
+                        (key '("wireguard" "private"))
                         (file user1.yaml)
                         (permissions #o400)))))))))
 ```
