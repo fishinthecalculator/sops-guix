@@ -155,7 +155,7 @@ Now, supposing you have your `home-environment` file in the same directory where
 
 ``` scheme
 (use-modules (sops secrets)
-             (sops services sops)
+             (sops home services sops)
              (guix utils))
 
 (define project-root
@@ -170,13 +170,13 @@ Now, supposing you have your `home-environment` file in the same directory where
 (define user1.yaml
   (local-file (string-append project-root "/user1.yaml")))
 
-(operating-system
+(home-environment
   [...]
   (services
     (list
        [...]
-       (service sops-secrets-service-type
-                (sops-service-configuration
+       (service home-sops-secrets-service-type
+                (home-sops-service-configuration
                   (gnupg-homedir (string-append (getenv "HOME") "/.gnupg"))
                   (config sops.yaml)
                   (secrets
