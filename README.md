@@ -89,7 +89,7 @@ uid           [ unknown] root (Imported from SSH) <root@localhost>
 
 By setting `generate-key?` to `#t` in `sops-service-configuration` a GPG key will be automatically derived for you from your system's `/etc/ssh/ssh_host_rsa_key` and added to the configured keyring. It is *discouraged* to do so and you are more than encouraged to autonomally provide a key in your configured keyring.
 
-### Adding secrets to your `operationg-system` record
+### Adding secrets to your `operating-system` record
 
 Now, supposing you have your `operating-system` file in the same directory where you have your `.sops.yaml` and `common.yaml` files, you can simply add the following to your configuration:
 
