@@ -90,7 +90,7 @@ or if you are really it's a bug in SOPS Guix make sure to report it at https://t
            (string-replace-substring sub-key "[" "")))
     (string-split
      (string-replace-substring key "\"" "") #\]))
-   "-"))
+   "/"))
 
 (define-maybe string)
 

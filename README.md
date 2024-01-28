@@ -138,8 +138,8 @@ total 12
 drwxr-xr-x 1 root root    50 Jan  2 12:44 .
 drwxr-xr-x 1 root root   254 Jan  2 12:44 ..
 lrwxrwxrwx 1 root root    53 Jan  2 12:44 .sops.yaml -> /gnu/store/lyhyh91jw2n2asa1w0fc0zmv93yxkxip-sops.yaml
--r-------- 1 user1 users  44 Jan  2 12:44 wireguard-private
-user1@host1:~ $ cat /run/secrets/wireguard-private
+-r-------- 1 user1 users  44 Jan  2 12:44 wireguard
+user1@host1:~ $ cat /run/secrets/wireguard/private
 MYPRIVATEKEY
 ```
 
@@ -195,8 +195,8 @@ total 12
 drwxr-xr-x 1 user1 users    50 Jan  2 12:44 .
 drwxr-xr-x 1 user1 users   254 Jan  2 12:44 ..
 lrwxrwxrwx 1 user1 users    53 Jan  2 12:44 .sops.yaml -> /gnu/store/lyhyh91jw2n2asa1w0fc0zmv93yxkxip-sops.yaml
--r-------- 1 user1 users    44 Jan  2 12:44 wireguard-private
-user1@host1:~ $ cat /run/user/$(id -u)/secrets/wireguard-private
+-r-------- 1 user1 users    44 Jan  2 12:44 wireguard
+user1@host1:~ $ cat /run/user/$(id -u)/secrets/wireguard/private
 MYPRIVATEKEY
 ```
 

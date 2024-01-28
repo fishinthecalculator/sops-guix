@@ -28,6 +28,7 @@
     (with-imported-modules '((guix build utils))
       #~(begin
           (use-modules (guix build utils)
+                       (srfi srfi-1)
                        (srfi srfi-26)
                        (ice-9 ftw)
                        (ice-9 match))
@@ -85,6 +86,7 @@
                     (gid (passwd:uid
                           (getgrnam group))))
 
+                (mkdir-p (dirname output))
                 (apply invoke `(#$sops "-d"
                                 "--extract" ,key
                                 "--output" ,output
@@ -95,7 +97,11 @@
 
                 ;; Setting owner is supported only in the system service
                 (when (= (getuid) 0)
-                  (chown output uid gid))
+                  (for-each
+                   (lambda (file)
+                     (chown file uid gid))
+                   (find-files (first (string-split derived-name #\/))
+                               #:directories? #t)))
                 ;; Permissions are supported regardless
                 (chmod output permissions)
 
@@ -105,6 +111,6 @@
 
                   ;; If everything goes well, setup symlink for
                   ;; cleaning up
-                  (mkdir-p extra-links-directory)
+                  (mkdir-p (dirname gc-link))
                   (symlink path gc-link)))))
            (list #$@secrets))))))
