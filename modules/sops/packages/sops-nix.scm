@@ -1,9 +1,10 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-;;; Copyright © 2023 Giacomo Leidi <goodoldpaul@autistici.org>
+;;; Copyright © 2023-2024 Giacomo Leidi <goodoldpaul@autistici.org>
 
 (define-module (sops packages sops-nix)
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages golang)
+  #:use-module (gnu packages golang-crypto)
   #:use-module (guix git-download)
   #:use-module (guix gexp)
   #:use-module (guix packages)
