@@ -13,6 +13,7 @@
   #:use-module (srfi srfi-1)
   #:export (sanitize-sops-key
             key->file-name
+            sops-secret->file-name
 
             sops-secret
             sops-secret?
@@ -122,6 +123,9 @@ use the secrets file's extension to determine the output format."
    (maybe-string)
    "An optional path on the filesystem where the secret will be symlinked."))
 
+(define (sops-secret->file-name secret)
+  (key->file-name (sops-secret-key secret)))
+
 ;; FIXME: This way of lowering secrets is not pretty.
 (define (lower-sops-secret secret)
   (let* ((key (sops-secret-key secret))
@@ -130,7 +134,7 @@ use the secrets file's extension to determine the output format."
          (output-type
           (sops-secret-output-type secret))
          (path (sops-secret-path secret)))
-    #~'(#$(sops-secret-key secret)
+    #~'(#$key
         #$(sops-secret-file secret)
         #$(sops-secret-user secret)
         #$(sops-secret-group secret)
