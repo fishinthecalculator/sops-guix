@@ -12,11 +12,17 @@
   #:use-module (sops secrets)
   #:use-module (sops services sops)
   #:use-module (srfi srfi-1)
-  #:export (sops-secrets-postgres-role
-            sops-secrets-postgres-role?
-            sops-secrets-postgres-role-fields
-            sops-secrets-postgres-role-password
-            sops-secrets-postgres-role-value
+  #:export (sops-secrets-postgresql-role
+            sops-secrets-postgresql-role?
+            sops-secrets-postgresql-role-fields
+            sops-secrets-postgresql-role-password
+            sops-secrets-postgresql-role-value
+
+            sops-secrets-postgresql-role-configuration
+            sops-secrets-postgresql-role-configuration?
+            sops-secrets-postgresql-role-configuration-fields
+            sops-secrets-postgresql-role-configuration-secrets-directory
+            sops-secrets-postgresql-role-configuration-value
 
             sops-secrets-postgresql-set-passwords
             sops-secrets-postgresql-role-shepherd-service
@@ -30,7 +36,19 @@
    (postgresql-role)
    "The postgres-role record for the password."))
 
-(define (sops-secrets-postgresql-set-passwords roles)
+(define-configuration/no-serialization sops-secrets-postgresql-role-configuration
+  (secrets-directory
+   (string "/run/secrets")
+   "The path on the filesystem where the secrets are decrypted.")
+  (value
+   (list-of-sops-secrets-postgresql-role '())
+   "The sops-secrets-postgres-role records to provision."))
+
+(define (sops-secrets-postgresql-set-passwords config)
+  (define roles
+    (sops-secrets-postgresql-role-configuration-value config))
+  (define secrets-directory
+    (sops-secrets-postgresql-role-configuration-secrets-directory config))
   (define (roles->queries roles)
     (string-join
      (map
@@ -39,7 +57,8 @@
                      (sops-secrets-postgresql-role-value role)))
               (password
                (sops-secrets-postgresql-role-password role)))
-          (string-append "ALTER ROLE " name " WITH PASSWORD '$(cat /run/secrets/" (sops-secret->file-name) ")';")))
+          (string-append "ALTER ROLE " name " WITH PASSWORD '$(cat " secrets-directory "/"
+                         (sops-secret->file-name password) ")';")))
       roles)
      " "))
 
@@ -68,12 +87,20 @@
                                           sops-secrets-postgresql-role-shepherd-service)
                        (service-extension sops-secrets-service-type
                                           (lambda (config)
-                                            (map sops-secrets-postgresql-role-password config)))
+                                            (map sops-secrets-postgresql-role-password
+                                                 (sops-secrets-postgresql-role-configuration-value config))))
                        (service-extension postgresql-role-service-type
                                           (lambda (config)
-                                            (map sops-secrets-postgresql-role-value config)))))
+                                            (map sops-secrets-postgresql-role-value
+                                                 (sops-secrets-postgresql-role-configuration-value config))))))
                 (compose concatenate)
-                (extend append)
-                (default-value '())
-                (description "Ensure the specified PostgreSQL roles are
-created after the PostgreSQL database is started.")))
+                (extend
+                 (lambda (config roles)
+                   (sops-secrets-postgresql-role-configuration
+                    (inherit config)
+                    (value
+                     (append (sops-secrets-postgresql-role-configuration-value config)
+                             roles)))))
+                (default-value (sops-secrets-postgresql-role-configuration))
+                (description "Ensure the specified PostgreSQL have a given password after they are
+created.")))
