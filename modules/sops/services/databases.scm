@@ -3,6 +3,7 @@
 
 (define-module (sops services databases)
   #:use-module (gnu)
+  #:use-module (gnu packages base)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages databases)
   #:use-module (gnu services)
@@ -53,26 +54,28 @@
   (define secrets-directory
     (sops-secrets-postgresql-role-configuration-secrets-directory config))
   (define (roles->queries roles)
-    (string-join
-     (map
-      (lambda (role)
-        (let ((name (postgresql-role-name
-                     (sops-secrets-postgresql-role-value role)))
-              (password
-               (sops-secrets-postgresql-role-password role)))
-          (string-append "ALTER ROLE " name " WITH PASSWORD '$(cat " secrets-directory "/"
-                         (sops-secret->file-name password) ")';")))
-      roles)
-     " "))
+    (apply mixed-text-file "sops-secrets-postgresql-set-passwords"
+           (map
+            (lambda (role)
+              (let ((cat (file-append coreutils "/bin/cat"))
+                    (psql (file-append postgresql "/bin/psql"))
+                    (name (postgresql-role-name
+                           (sops-secrets-postgresql-role-value role)))
+                    (password
+                     (sops-secrets-postgresql-role-password role)))
+                #~(string-append #$psql " -c \""
+                                 "ALTER ROLE " #$name " WITH PASSWORD "
+                                 "'$(" #$cat " " #$secrets-directory "/"
+                                 #$(sops-secret->file-name password) ")';\"\n")))
+            roles)))
 
-  #~(let ((bash #$(file-append bash-minimal "/bin/bash"))
-          (psql #$(file-append postgresql "/bin/psql")))
-      (list bash "-c" (string-append psql " -c \"" #$(roles->queries roles) "\""))))
+  #~(let ((bash #$(file-append bash-minimal "/bin/bash")))
+      (list bash #$(roles->queries roles))))
 
 (define (sops-secrets-postgresql-role-shepherd-service config)
   (list (shepherd-service
-         (requirement '(postgres-roles))
-         (provision '(sops-secrets-postgres-roles))
+         (requirement '(postgresql-roles sops-secrets))
+         (provision '(sops-secrets-postgresql-roles))
          (one-shot? #t)
          (start
           #~(lambda args
