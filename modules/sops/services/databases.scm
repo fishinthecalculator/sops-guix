@@ -36,12 +36,15 @@
    (postgresql-role)
    "The postgres-role record for the password."))
 
+(define (list-of-sops-secrets-postgresql-roles? lst)
+  (every sops-secrets-postgresql-role? lst))
+
 (define-configuration/no-serialization sops-secrets-postgresql-role-configuration
   (secrets-directory
    (string "/run/secrets")
    "The path on the filesystem where the secrets are decrypted.")
   (value
-   (list-of-sops-secrets-postgresql-role '())
+   (list-of-sops-secrets-postgresql-roles '())
    "The sops-secrets-postgres-role records to provision."))
 
 (define (sops-secrets-postgresql-set-passwords config)
