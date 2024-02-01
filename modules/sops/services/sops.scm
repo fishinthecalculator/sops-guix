@@ -11,6 +11,7 @@
   #:use-module (guix packages)
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages golang)
+  #:use-module (gnu packages golang-crypto)
   #:use-module (sops packages sops)
   #:use-module (sops activation)
   #:use-module (sops secrets)
