@@ -74,8 +74,8 @@
 
 (define (sops-secrets-postgresql-role-shepherd-service config)
   (list (shepherd-service
-         (requirement '(postgresql-roles sops-secrets))
-         (provision '(sops-secrets-postgresql-roles))
+         (requirement '(postgres-roles sops-secrets))
+         (provision '(sops-secrets-postgres-roles))
          (one-shot? #t)
          (start
           #~(lambda args
