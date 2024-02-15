@@ -4,6 +4,7 @@
 (define-module (sops packages sops-nix)
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages golang)
+  #:use-module (gnu packages golang-build)
   #:use-module (gnu packages golang-crypto)
   #:use-module (guix git-download)
   #:use-module (guix gexp)
