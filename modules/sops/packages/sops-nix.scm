@@ -13,31 +13,6 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (ice-9 match))
 
-(define-public ssh-to-age
-  (package
-    (name "ssh-to-age")
-    (version "1.1.6")
-    (source
-     (origin
-       (method git-fetch)
-       (uri (git-reference
-             (url "https://github.com/Mic92/ssh-to-age")
-             (commit version)))
-       (file-name (git-file-name name version))
-       (sha256
-        (base32 "06c7bswd5kkk3l0pbfgg0k0hzcrrij00s7gl4j2ffxn5q2iap13i"))))
-    (build-system go-build-system)
-    (arguments
-     '(#:import-path "github.com/Mic92/ssh-to-age"))
-    (propagated-inputs (list go-golang-org-x-sys
-                             go-golang-org-x-crypto
-                             go-filippo-io-edwards25519
-                             go-filippo-io-age))
-    (home-page "https://github.com/Mic92/ssh-to-age")
-    (synopsis "ssh-to-age")
-    (description "Convert SSH Ed25519 keys to age keys.")
-    (license license:expat)))
-
 (define-public ssh-to-pgp
   (package
     (name "ssh-to-pgp")
