@@ -7,106 +7,133 @@
   #:use-module (gnu packages bash)
   #:use-module (gnu packages databases)
   #:use-module (gnu services)
-  #:use-module (gnu services configuration)
-  #:use-module (gnu services databases)
   #:use-module (gnu services shepherd)
-  #:use-module (sops secrets)
-  #:use-module (sops services sops)
+  #:use-module (guix records)
   #:use-module (srfi srfi-1)
-  #:export (sops-secrets-postgresql-role
-            sops-secrets-postgresql-role?
-            sops-secrets-postgresql-role-fields
-            sops-secrets-postgresql-role-password
-            sops-secrets-postgresql-role-value
+  #:export (postgresql-role
+            postgresql-role?
+            postgresql-role-name
+            postgresql-role-password-file
+            postgresql-role-permissions
+            postgresql-role-create-database?
+            postgresql-role-configuration
+            postgresql-role-configuration?
+            postgresql-role-configuration-host
+            postgresql-role-configuration-log
+            postgresql-role-configuration-requirement
+            postgresql-role-configuration-roles
 
-            sops-secrets-postgresql-role-configuration
-            sops-secrets-postgresql-role-configuration?
-            sops-secrets-postgresql-role-configuration-fields
-            sops-secrets-postgresql-role-configuration-secrets-directory
-            sops-secrets-postgresql-role-configuration-value
+            postgresql-role-service-type))
 
-            sops-secrets-postgresql-set-passwords
-            sops-secrets-postgresql-role-shepherd-service
-            sops-secrets-postgresql-role-service-type))
+(define-record-type* <postgresql-role>
+  postgresql-role make-postgresql-role
+  postgresql-role?
+  (name             postgresql-role-name) ;string
+  (password-file    postgresql-role-password-file  ;string
+                    (default ""))
+  (permissions      postgresql-role-permissions
+                    (default '(createdb login))) ;list
+  (create-database? postgresql-role-create-database?  ;boolean
+                    (default #f))
+  (encoding postgresql-role-encoding ;string
+            (default "UTF8"))
+  (collation postgresql-role-collation ;string
+             (default "en_US.utf8"))
+  (ctype postgresql-role-ctype ;string
+         (default "en_US.utf8"))
+  (template postgresql-role-template ;string
+            (default "template1")))
 
-(define-configuration/no-serialization sops-secrets-postgresql-role
-  (password
-   (sops-secret)
-   "A sops-secret record representing the role password.")
-  (value
-   (postgresql-role)
-   "The postgres-role record for the password."))
+(define-record-type* <postgresql-role-configuration>
+  postgresql-role-configuration make-postgresql-role-configuration
+  postgresql-role-configuration?
+  (host             postgresql-role-configuration-host ;string
+                    (default "/var/run/postgresql"))
+  (requirement      postgresql-role-configuration-requirement ;list-of-symbols
+                    (default '()))
+  (log              postgresql-role-configuration-log ;string
+                    (default "/var/log/postgresql_roles.log"))
+  (roles            postgresql-role-configuration-roles
+                    (default '()))) ;list
 
-(define (list-of-sops-secrets-postgresql-roles? lst)
-  (every sops-secrets-postgresql-role? lst))
+(define (postgresql-create-roles config)
+  ;; See: https://www.postgresql.org/docs/current/sql-createrole.html for the
+  ;; complete permissions list.
+  (define (format-permissions permissions)
+    (let ((dict '(bypassrls createdb createrole login replication superuser)))
+      (string-join (filter-map (lambda (permission)
+                                 (and (member permission dict)
+                                      (string-upcase
+                                       (symbol->string permission))))
+                               permissions)
+                   " ")))
 
-(define-configuration/no-serialization sops-secrets-postgresql-role-configuration
-  (secrets-directory
-   (string "/run/secrets")
-   "The path on the filesystem where the secrets are decrypted.")
-  (value
-   (list-of-sops-secrets-postgresql-roles '())
-   "The sops-secrets-postgres-role records to provision."))
-
-(define (sops-secrets-postgresql-set-passwords config)
-  (define roles
-    (sops-secrets-postgresql-role-configuration-value config))
-  (define secrets-directory
-    (sops-secrets-postgresql-role-configuration-secrets-directory config))
-  (define (roles->queries roles)
-    (apply mixed-text-file "sops-secrets-postgresql-set-passwords"
+  (define (roles->queries host roles)
+    (apply mixed-text-file "queries"
            (map
             (lambda (role)
               (let ((cat (file-append coreutils "/bin/cat"))
-                    (psql (file-append postgresql "/bin/psql"))
-                    (name (postgresql-role-name
-                           (sops-secrets-postgresql-role-value role)))
-                    (password
-                     (sops-secrets-postgresql-role-password role)))
-                #~(string-append #$psql " -c \""
-                                 "ALTER ROLE " #$name " WITH PASSWORD "
-                                 "'$(" #$cat " " #$secrets-directory "/"
-                                 #$(sops-secret->file-name password) ")';\"\n")))
+                    (psql (file-append postgresql "/bin/psql")))
+                (match-record role <postgresql-role>
+                  (name permissions create-database? encoding collation ctype
+                   template password-file)
+                  #~(string-append #$psql " -a -h " #$host " -c \""
+                                   "SELECT NOT(EXISTS(SELECT 1 FROM \
+pg_catalog.pg_roles WHERE rolname = '" #$name "')) as not_exists;\n"
+                                   "\\gset\n"
+                                   "\\if :not_exists\n"
+                                   "CREATE ROLE \"" ,name "\""
+                                   " WITH " #$(format-permissions permissions)
+                                   (if (not (string-null? #$password-file))
+                                       "PASSWORD '$(" #$cat #$password-file ")'\n"
+                                       "")
+                                   ";\n"
+                                   (if create-database?
+                                       (string-append
+                                        "CREATE DATABASE \"" #$name "\""
+                                        " OWNER \"" #$name "\"\n"
+                                        " ENCODING '" #$encoding "'\n"
+                                        " LC_COLLATE '" #$collation "'\n"
+                                        " LC_CTYPE '" #$ctype "'\n"
+                                        " TEMPLATE " #$template ";\n")
+                                       "")
+                                   "\\endif\n\"\n"))))
             roles)))
 
-  #~(let ((bash #$(file-append bash-minimal "/bin/bash")))
-      (list bash #$(roles->queries roles))))
+  (let ((host (postgresql-role-configuration-host config))
+        (roles (postgresql-role-configuration-roles config)))
+    #~(let ((bash #$(file-append bash-minimal "/bin/bash")))
+        (list bash #$(roles->queries host roles)))))
 
-(define (sops-secrets-postgresql-role-shepherd-service config)
-  (list (shepherd-service
-         (requirement '(postgres-roles sops-secrets))
-         (provision '(sops-secrets-postgres-roles))
-         (one-shot? #t)
-         (start
-          #~(lambda args
-              (let ((pid (fork+exec-command
-                          #$(sops-secrets-postgresql-set-passwords config)
-                          #:user "postgres"
-                          #:group "postgres")))
-                (zero? (cdr (waitpid pid))))))
-         (documentation "Set PostgreSQL roles passwords."))))
+(define (postgresql-role-shepherd-service config)
+  (match-record config <postgresql-role-configuration>
+    (log requirement)
+    (list (shepherd-service
+           (requirement `(postgres ,@requirement))
+           (provision '(postgres-roles))
+           (one-shot? #t)
+           (start
+            #~(lambda args
+                (let ((pid (fork+exec-command
+                            #$(postgresql-create-roles config)
+                            #:user "postgres"
+                            #:group "postgres"
+                            #:log-file #$log)))
+                  (zero? (cdr (waitpid pid))))))
+           (documentation "Create PostgreSQL roles.")))))
 
-(define sops-secrets-postgresql-role-service-type
-  (service-type (name 'sops-secrets-postgresql-role)
+(define postgresql-role-service-type
+  (service-type (name 'postgresql-role)
                 (extensions
                  (list (service-extension shepherd-root-service-type
-                                          sops-secrets-postgresql-role-shepherd-service)
-                       (service-extension sops-secrets-service-type
-                                          (lambda (config)
-                                            (map sops-secrets-postgresql-role-password
-                                                 (sops-secrets-postgresql-role-configuration-value config))))
-                       (service-extension postgresql-role-service-type
-                                          (lambda (config)
-                                            (map sops-secrets-postgresql-role-value
-                                                 (sops-secrets-postgresql-role-configuration-value config))))))
+                                          postgresql-role-shepherd-service)))
                 (compose concatenate)
-                (extend
-                 (lambda (config roles)
-                   (sops-secrets-postgresql-role-configuration
-                    (inherit config)
-                    (value
-                     (append (sops-secrets-postgresql-role-configuration-value config)
-                             roles)))))
-                (default-value (sops-secrets-postgresql-role-configuration))
-                (description "Ensure the specified PostgreSQL have a given password after they are
-created.")))
+                (extend (lambda (config extended-roles)
+                          (match-record config <postgresql-role-configuration>
+                            (host roles)
+                            (postgresql-role-configuration
+                             (host host)
+                             (roles (append roles extended-roles))))))
+                (default-value (postgresql-role-configuration))
+                (description "Ensure the specified PostgreSQL roles are
+created after the PostgreSQL database is started.")))
