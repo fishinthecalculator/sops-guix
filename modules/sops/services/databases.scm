@@ -85,7 +85,8 @@ pg_catalog.pg_roles WHERE rolname = '" #$name "')) as not_exists;\n"
                                    "CREATE ROLE \"" #$name "\""
                                    " WITH " #$(format-permissions permissions)
                                    (if (not (string-null? #$password-file))
-                                       "PASSWORD '$(" #$cat #$password-file ")'\n"
+                                       (string-append
+                                        "PASSWORD '$(" #$cat #$password-file ")'\n")
                                        "")
                                    ";\n"
                                    (if create-database?
