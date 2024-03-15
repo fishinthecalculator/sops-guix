@@ -130,9 +130,9 @@ pg_catalog.pg_roles WHERE rolname = '" #$name "')) as not_exists;\n"
                 (compose concatenate)
                 (extend (lambda (config extended-roles)
                           (match-record config <postgresql-role-configuration>
-                            (host roles)
+                            (roles)
                             (postgresql-role-configuration
-                             (host host)
+                             (inherit config)
                              (roles (append roles extended-roles))))))
                 (default-value (postgresql-role-configuration))
                 (description "Ensure the specified PostgreSQL roles are
