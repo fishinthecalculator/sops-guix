@@ -89,7 +89,7 @@ pg_catalog.pg_roles WHERE rolname = '" #$name "')) as not_exists;\n"
                                         "PASSWORD '$(" #$cat #$password-file ")'\n")
                                        "")
                                    ";\n"
-                                   (if create-database?
+                                   (if #$create-database?
                                        (string-append
                                         "CREATE DATABASE \"" #$name "\""
                                         " OWNER \"" #$name "\"\n"
