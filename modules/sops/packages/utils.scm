@@ -4,6 +4,7 @@
 (define-module (sops packages utils)
   #:use-module (gnu packages base)
   #:use-module (gnu packages bash)
+  #:use-module (gnu packages crypto)
   #:use-module (gnu packages gnupg)
   #:use-module (guix gexp)
   #:use-module (guix git-download)
@@ -13,7 +14,6 @@
   #:use-module (guix build-system copy)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (sops packages sops)
-  #:use-module (sops packages sops-nix)
   #:use-module (ice-9 match))
 
 (define %source-dir
