@@ -254,7 +254,7 @@ You can search for package and service definitions from this channel any many ot
 All contributions are welcome. You can open issues at [todo.sr.ht/~fishinthecalculator/sops-guix](https://todo.sr.ht/~fishinthecalculator/sops-guix) and send contributions at [lists.sr.ht/~fishinthecalculator/sops-guix-devel](https://lists.sr.ht/~fishinthecalculator/sops-guix-devel). If you have commit access please remember to setup the authentication hook with
 
 ```bash
-cp etc/git/pre-push .git/hooks/pre-push
+guix git authenticate --cache-key=channels/sops-guix 0bbaf1fdd25266c7df790f65640aaa01e6d2dbc9 '8D10 60B9 6BB8 292E 829B  7249 AED4 1CC1 93B7 01E2'
 ```
 
 ## License
