@@ -128,13 +128,12 @@ use the secrets file's extension to determine the output format."
 
 ;; FIXME: This way of lowering secrets is not pretty.
 (define (lower-sops-secret secret)
-  (let* ((key (sops-secret-key secret))
-         (file-name
-          (key->file-name key))
+  (let* ((file-name
+          (sops-secret->file-name secret))
          (output-type
           (sops-secret-output-type secret))
          (path (sops-secret-path secret)))
-    #~'(#$key
+    #~'(#$(sops-secret-key secret)
         #$(sops-secret-file secret)
         #$(sops-secret-user secret)
         #$(sops-secret-group secret)
