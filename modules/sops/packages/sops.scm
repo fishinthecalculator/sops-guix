@@ -10,7 +10,7 @@
   #:use-module (ice-9 match))
 
 (define %sops-version
-  "3.8.0")
+  "3.8.1")
 
 (define (sops-origin-file-name system)
   (string-append "sops-" %sops-version "-" system "64"))
@@ -35,8 +35,8 @@
 (define-public sops
   (define-values (url file-name hash)
     (sops-origin-values
-     #:amd64-hash "1h1503lh5f87rpdsinv4kc5h8v9664crkd0mpq9r4jh1c9jlmys8"
-     #:aarch64-hash "0qrs3v401nzrqacqi9hq92yidrmn26rwkdzlkysm9q9mssp1xhsy"))
+     #:amd64-hash "15qnh4hi15i8689gnwbrkypirn624hqm48nnw34jf8cpc7xhggyn"
+     #:aarch64-hash "08fn0qx11pfifzs9s9ds973j1vzx6l876999rljk3hhdm06fkf0m"))
   (package
     (name "sops")
     (version %sops-version)
@@ -52,7 +52,7 @@
       ;; There's no point in substitutes.
       #:substitutable? #f
       #:install-plan
-      #~'((#$file-name "/bin/sops"))
+      #~'((#$file-name "bin/sops"))
       #:phases
       #~(modify-phases %standard-phases
           (add-before 'install 'chmod
