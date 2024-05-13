@@ -25,6 +25,7 @@
             sops-service-configuration-age
             sops-service-configuration-gnupg
             sops-service-configuration-sops
+            sops-service-configuration-key-type
             sops-service-configuration-config
             sops-service-configuration-generate-key?
             sops-service-configuration-gnupg-home
@@ -34,6 +35,13 @@
 
 (define list-of-sops-secrets?
   (list-of sops-secret?))
+
+(define (sanitize-key-type value)
+  (define supported '(age gnupg))
+  (if (member value supported)
+      value
+      (raise
+       (format #f "key-type value can only be one of ~a but ~a was found~%" supported value))))
 
 (define-configuration/no-serialization sops-service-configuration
   (age
@@ -48,6 +56,10 @@
   (config
    (gexp-or-file-like)
    "A gexp or file-like object evaluating to the SOPS config file.")
+  (key-type
+   (symbol 'gnupg)
+   "The key type to be used for the current system.  It can be either @code{'age} or @code{'gnupg}."
+   (sanitizer sanitize-key-type))
   (generate-key?
    (boolean #f)
    "When true a GPG key will be derived from the host SSH RSA key with
@@ -74,6 +86,8 @@ when decrypting a secret.")
             (sops-service-configuration-config config))
            (generate-key?
             (sops-service-configuration-generate-key? config))
+           (key-type
+            (sops-service-configuration-key-type config))
            (age-key-file
             (sops-service-configuration-age-key-file config))
            (gnupg-home
@@ -93,6 +107,7 @@ when decrypting a secret.")
                              (list
                               #$(program-file "sops-secrets-entrypoint"
                                               (activate-secrets config-file
+                                                                key-type
                                                                 age-key-file
                                                                 gnupg-home
                                                                 secrets
