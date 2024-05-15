@@ -10,7 +10,6 @@
   #:export (activate-secrets))
 
 (define* (activate-secrets config-file
-                           age-key-file
                            gnupg-home
                            sops-secrets
                            sops-package
@@ -45,7 +44,6 @@
                        (not (member file `("." ".." ,@exclude))))
                      string<?))
 
-          (setenv "SOPS_AGE_KEY_FILE" #$age-key-file)
           (setenv "GNUPGHOME" #$gnupg-home)
           (setenv "SOPS_GPG_EXEC" #$gpg)
 
