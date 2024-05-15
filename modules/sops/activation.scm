@@ -47,13 +47,9 @@
                      string<?))
 
           (if #$(eq? key-type 'age)
-              (begin
-                (setenv "SOPS_DECRYPTION_ORDER" "age")
-                (setenv "SOPS_AGE_KEY_FILE" #$age-key-file))
-              (begin
-                (setenv "GNUPGHOME" #$gnupg-home)
-                (setenv "SOPS_DECRYPTION_ORDER" "pgp")
-                (setenv "SOPS_GPG_EXEC" #$gpg)))
+              (setenv "SOPS_AGE_KEY_FILE" #$age-key-file)
+              (begin (setenv "GNUPGHOME" #$gnupg-home)
+                     (setenv "SOPS_GPG_EXEC" #$gpg)))
 
           (if #$generate-key?
               (invoke #$generate-host-key.sh)
