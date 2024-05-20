@@ -1,5 +1,10 @@
 (channel-news
   (version 0)
+  (entry (commit "fa43482b956fa9f355454e9e8939e2e2a4c78130")
+         (title (en "Move channel to Github.")
+                (it "Migrazione a Github."))
+         (body (en "This channel is moving over to https://github.com/fishinthecalculator/sops-guix to lower the bar for contributions.")
+               (it "Questo channel si trasferisce su https://github.com/fishinthecalculator/sops-guix per semplificare il processo di contribuzione.")))
   (entry (commit "fdffef2b4a177edc24156a51c0489020cae4287a")
          (title (en "Decrypt secrets in a hierarchy of directories.")
                 (it "Decrypt secrets in a hierarchy of directorie."))
