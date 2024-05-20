@@ -1,6 +1,6 @@
 # SOPS Guix
 
-[![builds.sr.ht status](https://builds.sr.ht/~fishinthecalculator/sops-guix/commits/main/.build.yml.svg)](https://builds.sr.ht/~fishinthecalculator/sops-guix/commits/main/.build.yml?)
+[![CI](https://github.com/fishinthecalculator/sops-guix/actions/workflows/main.yml/badge.svg)](https://github.com/fishinthecalculator/sops-guix/actions/workflows/main.yml)
 
 This project aims at implementing secure provisioning of secrets with Guix and [SOPS](https://getsops.io). It was strongly inspired from NixOS' [sops-nix](https://github.com/Mic92/sops-nix).
 
@@ -207,7 +207,7 @@ To configure Guix for using this channel you need to create a `.config/guix/chan
 ``` scheme
 (cons* (channel
         (name 'sops-guix)
-        (url "https://git.sr.ht/~fishinthecalculator/sops-guix")
+        (url "https://github.com/fishinthecalculator/sops-guix")
         (branch "main")
         ;; Enable signature verification:
         (introduction
@@ -223,7 +223,7 @@ Otherwise, if you already have a `.config/guix/channels.scm` you can simply prep
 ``` scheme
 (cons* (channel
         (name 'sops-guix)
-        (url "https://git.sr.ht/~fishinthecalculator/sops-guix")
+        (url "https://github.com/fishinthecalculator/sops-guix")
         (branch "main")
         ;; Enable signature verification:
         (introduction
@@ -251,7 +251,7 @@ You can search for package and service definitions from this channel any many ot
 
 ## Contributing
 
-All contributions are welcome. You can open issues at [todo.sr.ht/~fishinthecalculator/sops-guix](https://todo.sr.ht/~fishinthecalculator/sops-guix) and send contributions at [lists.sr.ht/~fishinthecalculator/sops-guix-devel](https://lists.sr.ht/~fishinthecalculator/sops-guix-devel). If you have commit access please remember to setup the authentication hook with
+All contributions are welcome. If you have commit access please remember to setup the authentication hook with
 
 ```bash
 guix git authenticate --cache-key=channels/sops-guix 0bbaf1fdd25266c7df790f65640aaa01e6d2dbc9 '8D10 60B9 6BB8 292E 829B  7249 AED4 1CC1 93B7 01E2'
