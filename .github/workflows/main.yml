@@ -34,4 +34,4 @@ jobs:
 
       # Runs a set of commands using the runners shell
       - name: Run tests
-        run: guix shell make -- make check
+        run: guix shell guile make -- make check
