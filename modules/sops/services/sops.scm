@@ -22,10 +22,13 @@
             sops-service-configuration
             sops-service-configuration?
             sops-service-configuration-fields
+            sops-service-configuration-age
+            sops-service-configuration-gnupg
             sops-service-configuration-sops
             sops-service-configuration-config
             sops-service-configuration-generate-key?
             sops-service-configuration-gnupg-home
+            sops-service-configuration-age-key-file
             sops-service-configuration-secrets-directory
             sops-service-configuration-secrets))
 
@@ -33,6 +36,12 @@
   (list-of sops-secret?))
 
 (define-configuration/no-serialization sops-service-configuration
+  (age
+   (package age)
+   "The @code{age} package used to perform decryption.")
+  (gnupg
+   (package gnupg)
+   "The @code{GnuPG} package used to perform decryption.")
   (sops
    (package sops)
    "The @code{SOPS} package used to perform decryption.")
@@ -48,6 +57,10 @@ more than welcome to provide your own key in the keyring.")
   (gnupg-home
    (string "/root/.gnupg")
    "The homedir of GnuPG, i.e. where keys used to decrypt SOPS secrets will be looked for.")
+  (age-key-file
+   (string "/root/.config/sops/age/keys.txt")
+   "The file containing the corresponding @code{age} identities where SOPS will look for
+when decrypting a secret.")
   (secrets-directory
    (string "/run/secrets")
    "The path on the filesystem where the secrets will be decrypted.")
@@ -61,6 +74,8 @@ more than welcome to provide your own key in the keyring.")
             (sops-service-configuration-config config))
            (generate-key?
             (sops-service-configuration-generate-key? config))
+           (age-key-file
+            (sops-service-configuration-age-key-file config))
            (gnupg-home
             (sops-service-configuration-gnupg-home config))
            (secrets (sops-service-configuration-secrets config))
@@ -81,6 +96,7 @@ more than welcome to provide your own key in the keyring.")
                              (list
                               #$(program-file "sops-secrets-entrypoint"
                                               (activate-secrets config-file
+                                                                age-key-file
                                                                 gnupg-home
                                                                 secrets
                                                                 sops
@@ -110,7 +126,8 @@ more than welcome to provide your own key in the keyring.")
   (service-type (name 'sops-secrets)
                 (extensions (list (service-extension profile-service-type
                                                      (lambda (config)
-                                                       (list age gnupg
+                                                       (list (sops-service-configuration-age config)
+                                                             (sops-service-configuration-gnupg config)
                                                              (sops-service-configuration-sops config))))
                                   (service-extension file-system-service-type
                                                      %sops-secrets-file-system)
@@ -123,7 +140,6 @@ more than welcome to provide your own key in the keyring.")
                                                                    (mkdir-p secrets-directory)))))
                                   (service-extension shepherd-root-service-type
                                                      sops-secrets-shepherd-service)))
-                (default-value #f)
                 (compose concatenate)
                 (extend secrets->sops-service-configuration)
                 (description
