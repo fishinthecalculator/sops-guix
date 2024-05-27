@@ -10,6 +10,7 @@
   #:export (activate-secrets))
 
 (define* (activate-secrets config-file
+                           key-type
                            age-key-file
                            gnupg-home
                            sops-secrets
@@ -45,9 +46,10 @@
                        (not (member file `("." ".." ,@exclude))))
                      string<?))
 
-          (setenv "SOPS_AGE_KEY_FILE" #$age-key-file)
-          (setenv "GNUPGHOME" #$gnupg-home)
-          (setenv "SOPS_GPG_EXEC" #$gpg)
+          (if #$(eq? key-type 'age)
+              (setenv "SOPS_AGE_KEY_FILE" #$age-key-file)
+              (begin (setenv "GNUPGHOME" #$gnupg-home)
+                     (setenv "SOPS_GPG_EXEC" #$gpg)))
 
           (if #$generate-key?
               (invoke #$generate-host-key.sh)

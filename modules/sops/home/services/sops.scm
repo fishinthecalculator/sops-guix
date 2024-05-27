@@ -14,6 +14,7 @@
   #:use-module (sops activation)
   #:use-module (sops secrets)
   #:use-module (sops validation)
+  #:use-module (ice-9 format)
   #:use-module (srfi srfi-1)
   #:export (home-sops-secrets-service-type
 
@@ -24,12 +25,20 @@
             home-sops-service-configuration-gnupg
             home-sops-service-configuration-sops
             home-sops-service-configuration-config
+            home-sops-service-configuration-key-type
             home-sops-service-configuration-gnupg-home
             home-sops-service-configuration-age-key-file
             home-sops-service-configuration-secrets))
 
 (define list-of-sops-secrets?
   (list-of sops-secret?))
+
+(define (sanitize-key-type value)
+  (define supported '(age gnupg))
+  (if (member value supported)
+      value
+      (raise
+       (format #f "key-type value can only be one of ~a but ~a was found~%" supported value))))
 
 (define-configuration/no-serialization home-sops-service-configuration
   (age
@@ -41,6 +50,10 @@
   (sops
    (package sops)
    "The @code{SOPS} package used to perform decryption.")
+  (key-type
+   (symbol 'gnupg)
+   "The key type to be used for the current system.  It can be either @code{'age} or @code{'gnupg}."
+   (sanitizer sanitize-key-type))
   (config
    (gexp-or-file-like)
    "A gexp or file-like object evaluating to the SOPS config file.")
@@ -59,6 +72,8 @@ when decrypting a secret.")
   (when config
     (let* ((config-file
             (home-sops-service-configuration-config config))
+           (key-type
+            (home-sops-service-configuration-key-type config))
            (age-key-file
             (home-sops-service-configuration-age-key-file config))
            (gnupg-home
@@ -76,6 +91,7 @@ when decrypting a secret.")
                              (list
                               #$(program-file "home-sops-secrets-entrypoint"
                                               (activate-secrets config-file
+                                                                key-type
                                                                 age-key-file
                                                                 gnupg-home
                                                                 secrets
