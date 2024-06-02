@@ -247,7 +247,7 @@ Otherwise, if you already have a `.config/guix/channels.scm` you can simply prep
 
 A [channel](https://guix.gnu.org/en/manual/devel/en/guix.html#Channels) is roughly the Guix equivalent of the AUR or container registries. It's a software repository providing Guix package and service definitions.
 
-You can search for package and service definitions from this channel any many others at [toys.whereis.みんな](https://toys.whereis.みんな).
+You can search for package and service definitions from this channel and many others at [toys.whereis.みんな](https://toys.whereis.みんな).
 
 ## Contributing
 
