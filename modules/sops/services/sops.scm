@@ -69,7 +69,10 @@ more than welcome to provide your own key in the keyring.")
            (sops (sops-service-configuration-sops config)))
       (list
        (shepherd-service (provision '(sops-secrets))
-                         (requirement '(file-systems))
+                         (requirement
+                          `(user-processes
+                            ,(string->symbol
+                              (string-append "file-system-" secrets-directory))))
                          (one-shot? #t)
                          (documentation
                           "SOPS secrets decrypting service.")
