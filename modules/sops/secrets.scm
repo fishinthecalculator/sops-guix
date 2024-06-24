@@ -34,7 +34,7 @@
       (raise
        (formatted-message
         (G_ "key field value must follow Python's dictionary syntax, but ~a was found.~%~%Please refer to the SOPS documentation to make sure of the actual syntax,
-or if you are really it's a bug in SOPS Guix make sure to report it at https://todo.sr.ht/~fishinthecalculator/sops-guix .")
+or if you are really it's a bug in SOPS Guix make sure to report it at https://github.com/fishinthecalculator/sops-guix .")
         value))))
 
 (define (sanitize-sops-list-key value)

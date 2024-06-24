@@ -75,5 +75,5 @@
     (synopsis "Utilities for deploying secrets")
     (description "This package bundles a set of scripts required to facilitate
 the deploying of SOPS Guix secrets.")
-    (home-page "https://sr.ht/~fishinthecalculator/sops-guix/")
+    (home-page "https://github.com/fishinthecalculator/sops-guix")
     (license license:gpl3)))
