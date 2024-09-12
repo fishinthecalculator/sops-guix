@@ -30,7 +30,7 @@
   postgresql-role?
   (name             postgresql-role-name) ;string
   (password-file    postgresql-role-password-file  ;string
-                    (default ""))
+                    (default #f))
   (permissions      postgresql-role-permissions
                     (default '(createdb login))) ;list
   (create-database? postgresql-role-create-database?  ;boolean
@@ -68,43 +68,62 @@
                                permissions)
                    " ")))
 
-  (define (roles->queries host roles)
+  (define (password-value role)
+    (string-append "password_" (postgresql-role-name role)))
+
+  (define (role->password-variable role)
+    (define file-name
+      (postgresql-role-password-file role))
+    (if (string? file-name)
+        ;; This way passwords do not leak to the command line
+        (string-append "-v \"" (password-value role)
+                       "=$(cat " file-name ")\"")
+        ""))
+
+  (define (roles->queries roles)
     (apply mixed-text-file "queries"
-           (map
+           (append-map
             (lambda (role)
-              (let ((cat (file-append coreutils "/bin/cat"))
-                    (psql (file-append postgresql "/bin/psql")))
-                (match-record role <postgresql-role>
-                  (name permissions create-database? encoding collation ctype
-                   template password-file)
-                  #~(string-append #$psql " -a -h " #$host " -c \""
-                                   "SELECT NOT(EXISTS(SELECT 1 FROM \
-pg_catalog.pg_roles WHERE rolname = '" #$name "')) as not_exists;\n"
-                                   "\\gset\n"
-                                   "\\if :not_exists\n"
-                                   "CREATE ROLE \"" #$name "\""
-                                   " WITH " #$(format-permissions permissions)
-                                   (if (not (string-null? #$password-file))
-                                       (string-append
-                                        "\nPASSWORD '$(" #$cat #$password-file ")'")
-                                       "")
-                                   ";\n"
-                                   (if #$create-database?
-                                       (string-append
-                                        "CREATE DATABASE \"" #$name "\""
-                                        " OWNER \"" #$name "\"\n"
-                                        " ENCODING '" #$encoding "'\n"
-                                        " LC_COLLATE '" #$collation "'\n"
-                                        " LC_CTYPE '" #$ctype "'\n"
-                                        " TEMPLATE " #$template ";\n")
-                                       "")
-                                   "\\endif\n\"\n"))))
+              (match-record role <postgresql-role>
+                (name permissions create-database? encoding collation ctype
+                      template password-file)
+                `("SELECT NOT(EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE \
+rolname = '" ,name "')) as not_exists;\n"
+"\\gset\n"
+"\\if :not_exists\n"
+"CREATE ROLE \"" ,name "\""
+" WITH " ,(format-permissions permissions)
+,(if (and (string? password-file)
+          (not (string-null? password-file)))
+     (string-append
+      "\nPASSWORD :'" (password-value role) "'")
+     "")
+";\n"
+,@(if create-database?
+      `("CREATE DATABASE \"" ,name "\""
+        " OWNER \"" ,name "\"\n"
+        " ENCODING '" ,encoding "'\n"
+        " LC_COLLATE '" ,collation "'\n"
+        " LC_CTYPE '" ,ctype "'\n"
+        " TEMPLATE " ,template ";")
+      '())
+"\\endif\n")))
             roles)))
 
   (let ((host (postgresql-role-configuration-host config))
         (roles (postgresql-role-configuration-roles config)))
-    #~(let ((bash #$(file-append bash-minimal "/bin/bash")))
-        (list bash #$(roles->queries host roles)))))
+    (program-file "run-queries"
+      #~(let ((bash #$(file-append bash-minimal "/bin/bash"))
+              (psql #$(file-append postgresql "/bin/psql")))
+          (define command
+            (string-append
+             "set -e; exec " psql " -c -a -h " #$host " -f "
+             #$(roles->queries roles) " "
+             (string-join
+              (list
+               #$@(map role->password-variable roles))
+              " ")))
+          (execlp bash bash "-c" command)))))
 
 (define (postgresql-role-shepherd-service config)
   (match-record config <postgresql-role-configuration>
@@ -116,7 +135,7 @@ pg_catalog.pg_roles WHERE rolname = '" #$name "')) as not_exists;\n"
            (start
             #~(lambda args
                 (let ((pid (fork+exec-command
-                            #$(postgresql-create-roles config)
+                            (list #$(postgresql-create-roles config))
                             #:user "postgres"
                             #:group "postgres"
                             #:log-file #$log)))
