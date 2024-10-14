@@ -158,13 +158,6 @@ when decrypting a secret.")
                                                        (list (sops-service-configuration-sops config))))
                                   (service-extension file-system-service-type
                                                      %sops-secrets-file-system)
-                                  (service-extension activation-service-type
-                                                     (lambda (config)
-                                                       #~(begin
-                                                           (define secrets-directory
-                                                             #$(sops-service-configuration-secrets-directory config))
-                                                           (unless (file-exists? secrets-directory)
-                                                                   (mkdir-p secrets-directory)))))
                                   (service-extension shepherd-root-service-type
                                                      sops-secrets-shepherd-service)))
                 (compose concatenate)

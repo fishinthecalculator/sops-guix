@@ -102,12 +102,6 @@ when decrypting a secret.")
                 (extensions (list (service-extension home-profile-service-type
                                                      (lambda (config)
                                                        (list (home-sops-service-configuration-sops config))))
-                                  (service-extension home-activation-service-type
-                                                     (lambda _
-                                                       #~(begin
-                                                           (define secrets-directory (string-append "/run/user/" (number->string (getuid)) "/secrets"))
-                                                           (unless (file-exists? secrets-directory)
-                                                             (mkdir-p secrets-directory)))))
                                   (service-extension home-shepherd-service-type
                                                      home-sops-secrets-shepherd-service)))
                 (compose concatenate)

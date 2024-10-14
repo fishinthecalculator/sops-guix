@@ -61,23 +61,23 @@
               (format #t "no host key will be generated...~%"))
 
           (format #t "setting up secrets in '~a'...~%" secrets-directory)
-          (when (file-exists? secrets-directory)
-            (begin
-              ;; Cleanup secrets symlink
-              (when (file-exists? extra-links-directory)
-                (for-each
-                 (lambda (link)
-                   (define link-path (string-append extra-links-directory "/" link))
-                   (define link-target (readlink link-path))
-                   ;; The user may have manually deleted the target.
-                   (when (file-exists? link-target)
-                     (format #t "Deleting ~a -> ~a...~%" link-path link-target)
-                     (delete-file-recursively link-target)))
-                 (list-content extra-links-directory)))
-              ;; Cleanup secrets
-              (for-each (compose delete-file-recursively
-                                 (cut string-append secrets-directory "/" <>))
-                        (list-content secrets-directory))))
+          (unless (file-exists? secrets-directory)
+            (mkdir-p secrets-directory))
+          ;; Cleanup secrets symlink
+          (when (file-exists? extra-links-directory)
+            (for-each
+             (lambda (link)
+               (define link-path (string-append extra-links-directory "/" link))
+               (define link-target (readlink link-path))
+               ;; The user may have manually deleted the target.
+               (when (file-exists? link-target)
+                 (format #t "Deleting ~a -> ~a...~%" link-path link-target)
+                 (delete-file-recursively link-target)))
+             (list-content extra-links-directory)))
+          ;; Cleanup secrets
+          (for-each (compose delete-file-recursively
+                             (cut string-append secrets-directory "/" <>))
+                    (list-content secrets-directory))
 
           (chdir secrets-directory)
           (symlink #$config-file (string-append secrets-directory "/.sops.yaml"))
