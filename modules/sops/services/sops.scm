@@ -19,6 +19,13 @@
   #:use-module (srfi srfi-1)
   #:export (sops-secrets-service-type
 
+            sops-public-key
+            sops-public-key?
+            sops-public-key-fields
+            sops-public-key-name
+            sops-public-key-value
+            sops-public-key-type
+
             sops-service-configuration
             sops-service-configuration?
             sops-service-configuration-fields
@@ -34,6 +41,23 @@
 
 (define list-of-sops-secrets?
   (list-of sops-secret?))
+
+(define-configuration/no-serialization sops-public-key
+  (name
+   (string)
+   "The name of the SOPS key.")
+  (value
+   (string)
+   "The value of the public key.")
+  (type
+   (symbol)
+   (string-append "A symbol denoting the type of public key, supported types
+are:
+
+@itemize
+@item @code{'gpg}
+@item @code{'age}
+@end itemize")))
 
 (define-configuration/no-serialization sops-service-configuration
   (age
