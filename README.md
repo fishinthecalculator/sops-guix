@@ -87,7 +87,7 @@ pub   rsa3072 1970-01-01 [SCE]
 uid           [ unknown] root (Imported from SSH) <root@localhost>
 ```
 
-By setting `generate-key?` to `#t` in `sops-service-configuration` a GPG key will be automatically derived for you from your system's `/etc/ssh/ssh_host_rsa_key` and added to the configured keyring. It is *discouraged* to do so and you are more than encouraged to autonomously provide a key in your configured keyring.
+By setting `generate-key?` to `#t` in `sops-service-configuration` a GPG key will be automatically derived for you from your system's `/etc/ssh/ssh_host_rsa_key` and added to the configured keyring. It is *discouraged* to do so and you are more than encouraged to autonomously provide a key in your configured keyring. While having `sops-guix` generate a keypair on your behalf is easier, you have less control on the key. For example some could have a requirement to rotate the key periodically. You can certainly enable it once, deploy your configuration, turn it off and handling it from there, but it may not be the best default choice in every case.
 
 ### Adding secrets to your `operating-system` record
 
