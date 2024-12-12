@@ -14,13 +14,14 @@
                            gnupg-home
                            sops-secrets
                            sops-package
+                           gpg-command
                            #:key (secrets-directory #f)
-                                 (generate-key? #f))
+                                 (generate-key? #f)
+                                 (verbose? #f))
   "Return an activation gexp for provided secrets."
   (let* ((bash (file-append bash-minimal "/bin/bash"))
          (generate-host-key.sh
           (file-append sops-guix-utils "/bin/generate-host-key.sh"))
-         (gpg (file-append gnupg "/bin/gpg"))
          (secrets
           (map lower-sops-secret sops-secrets))
          (sops
@@ -47,7 +48,13 @@
 
           (setenv "SOPS_AGE_KEY_FILE" #$age-key-file)
           (setenv "GNUPGHOME" #$gnupg-home)
-          (setenv "SOPS_GPG_EXEC" #$gpg)
+          (setenv "SOPS_GPG_EXEC" #$gpg-command)
+          (when #$verbose?
+            (for-each (lambda (var)
+                        (format #t "~a: ~a~%" var (getenv var)))
+                      '("SOPS_AGE_KEY_FILE"
+                        "GNUPGHOME"
+                        "SOPS_GPG_EXEC")))
 
           (if #$generate-key?
               (invoke #$generate-host-key.sh)
@@ -79,33 +86,41 @@
           (for-each
            (match-lambda
              ((key secrets-file user group permissions output-type path derived-name)
-              (let ((output
-                     (string-append secrets-directory "/" derived-name))
-                    (gc-link
-                     (string-append extra-links-directory "/" derived-name))
-                    (uid (passwd:uid
-                          (getpwnam user)))
-                    (gid (passwd:uid
-                          (getgrnam group))))
+              (let* ((output
+                      (string-append secrets-directory "/" derived-name))
+                     (gc-link
+                      (string-append extra-links-directory "/" derived-name))
+                     (uid (passwd:uid
+                           (getpwnam user)))
+                     (gid (passwd:uid
+                           (getgrnam group)))
+                     (command
+                      `(#$sops "-d"
+                        "--extract" ,key
+                        "--output" ,output
+                        ,@(if output-type
+                              `("--output-type" ,output-type)
+                              '())
+                        ,secrets-file)))
 
+                (when #$verbose?
+                  (format #t "Running~{ ~a~}~%" command))
                 (mkdir-p (dirname output))
-                (apply invoke `(#$sops "-d"
-                                "--extract" ,key
-                                "--output" ,output
-                                ,@(if output-type
-                                      `("--output-type" ,output-type)
-                                      '())
-                                ,secrets-file))
+                (apply invoke command)
 
                 ;; Setting owner is supported only in the system service
                 (when (= (getuid) 0)
                   (for-each
                    (lambda (file)
+                     (when #$verbose?
+                       (format #t "Changing owner of ~a to ~a:~a" file uid gid))
                      (chown file uid gid))
                    (find-files (first (string-split derived-name #\/))
                                #:directories? #t)))
                 ;; Permissions are supported regardless
                 (chmod output permissions)
+                (when #$verbose?
+                  (format #t "Setting ~a to ~a~%" output permissions))
 
                 (when path
                   ;; First try to setup the symlink
@@ -114,5 +129,7 @@
                   ;; If everything goes well, setup symlink for
                   ;; cleaning up
                   (mkdir-p (dirname gc-link))
-                  (symlink path gc-link)))))
+                  (symlink path gc-link)
+                  (when #$verbose?
+                    (format #t "Setup symlinks at ~a and ~a~%" path gc-link))))))
            (list #$@secrets))))))

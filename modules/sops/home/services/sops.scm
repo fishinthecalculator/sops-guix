@@ -66,7 +66,9 @@ when decrypting a secret.")
            (gnupg-home
             (home-sops-service-configuration-gnupg-home config))
            (secrets (home-sops-service-configuration-secrets config))
-           (sops (home-sops-service-configuration-sops config)))
+           (gnupg (home-sops-service-configuration-gnupg config))
+           (sops (home-sops-service-configuration-sops config))
+           (verbose? (home-sops-service-configuration-sops config)))
       (list
        (shepherd-service (provision '(home-sops-secrets))
                          (requirement '())
@@ -81,7 +83,9 @@ when decrypting a secret.")
                                                                 age-key-file
                                                                 gnupg-home
                                                                 secrets
-                                                                sops)))))
+                                                                sops gnupg
+                                                                #:verbose?
+                                                                verbose?)))))
                          (stop
                           #~(make-kill-destructor)))))))
 

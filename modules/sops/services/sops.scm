@@ -106,6 +106,9 @@ when decrypting a secret.")
            (secrets (sops-service-configuration-secrets config))
            (secrets-directory
             (sops-service-configuration-secrets-directory config))
+           (verbose?
+            (sops-service-configuration-verbose? config))
+           (gnupg (sops-service-configuration-gnupg config))
            (sops (sops-service-configuration-sops config)))
       (list
        (shepherd-service (provision '(sops-secrets))
@@ -124,9 +127,10 @@ when decrypting a secret.")
                                                                 age-key-file
                                                                 gnupg-home
                                                                 secrets
-                                                                sops
+                                                                sops gnupg
                                                                 #:secrets-directory secrets-directory
-                                                                #:generate-key? generate-key?)))))
+                                                                #:generate-key? generate-key?
+                                                                #:verbose? verbose?)))))
                          (stop
                           #~(make-kill-destructor)))))))
 
