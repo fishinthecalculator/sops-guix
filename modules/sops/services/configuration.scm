@@ -7,7 +7,7 @@
             sanitize-gexp-or-string))
 
 (define (gexp-or-string? value)
-  (or (gexp? value) (string? value)))
+  (or (file-like? value) (gexp? value) (string? value)))
 
 (define (sanitize-gexp-or-string value)
   (if (gexp-or-string? value)
