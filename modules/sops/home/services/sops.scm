@@ -10,6 +10,7 @@
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages golang)
   #:use-module (gnu packages golang-crypto)
+  #:use-module (sops services configuration)
   #:use-module (sops packages sops)
   #:use-module (sops activation)
   #:use-module (sops secrets)
@@ -20,24 +21,22 @@
             home-sops-service-configuration
             home-sops-service-configuration?
             home-sops-service-configuration-fields
-            home-sops-service-configuration-age
             home-sops-service-configuration-gnupg
             home-sops-service-configuration-sops
             home-sops-service-configuration-config
             home-sops-service-configuration-gnupg-home
             home-sops-service-configuration-age-key-file
+            home-sops-service-configuration-verbose?
             home-sops-service-configuration-secrets))
 
 (define list-of-sops-secrets?
   (list-of sops-secret?))
 
 (define-configuration/no-serialization home-sops-service-configuration
-  (age
-   (package age)
-   "The @code{age} package used to perform decryption.")
   (gnupg
-   (package gnupg)
-   "The @code{GnuPG} package used to perform decryption.")
+   (gexp-or-string (file-append gnupg "/bin/gpg"))
+   "The @code{GnuPG} command line used to perform decryption."
+   (sanitizer sanitize-gexp-or-string))
   (sops
    (package sops)
    "The @code{SOPS} package used to perform decryption.")
@@ -51,6 +50,9 @@
    (string "~/.config/sops/age/keys.txt")
    "The file containing the corresponding @code{age} identities where SOPS will look for
 when decrypting a secret.")
+  (verbose?
+   (boolean #f)
+   "When true the service will print extensive information about its execution state.")
   (secrets
    (list-of-sops-secrets '())
    "The @code{sops-secret} records managed by the @code{home-sops-secrets-service-type}."))
@@ -95,9 +97,7 @@ when decrypting a secret.")
   (service-type (name 'home-sops-secrets)
                 (extensions (list (service-extension home-profile-service-type
                                                      (lambda (config)
-                                                       (list (home-sops-service-configuration-age config)
-                                                             (home-sops-service-configuration-gnupg config)
-                                                             (home-sops-service-configuration-sops config))))
+                                                       (list (home-sops-service-configuration-sops config))))
                                   (service-extension home-activation-service-type
                                                      (lambda _
                                                        #~(begin

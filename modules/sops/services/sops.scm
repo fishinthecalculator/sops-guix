@@ -13,6 +13,7 @@
   #:use-module (gnu packages golang)
   #:use-module (gnu packages golang-crypto)
   #:use-module (sops packages sops)
+  #:use-module (sops services configuration)
   #:use-module (sops activation)
   #:use-module (sops secrets)
   #:use-module (sops validation)
@@ -29,13 +30,13 @@
             sops-service-configuration
             sops-service-configuration?
             sops-service-configuration-fields
-            sops-service-configuration-age
             sops-service-configuration-gnupg
             sops-service-configuration-sops
             sops-service-configuration-config
             sops-service-configuration-generate-key?
             sops-service-configuration-gnupg-home
             sops-service-configuration-age-key-file
+            sops-service-configuration-verbose?
             sops-service-configuration-secrets-directory
             sops-service-configuration-secrets))
 
@@ -60,12 +61,9 @@ are:
 @end itemize")))
 
 (define-configuration/no-serialization sops-service-configuration
-  (age
-   (package age)
-   "The @code{age} package used to perform decryption.")
   (gnupg
-   (package gnupg)
-   "The @code{GnuPG} package used to perform decryption.")
+   (gexp-or-string (file-append gnupg "/bin/gpg"))
+   "The @code{GnuPG} command line used to perform decryption.")
   (sops
    (package sops)
    "The @code{SOPS} package used to perform decryption.")
@@ -88,6 +86,9 @@ when decrypting a secret.")
   (secrets-directory
    (string "/run/secrets")
    "The path on the filesystem where the secrets will be decrypted.")
+  (verbose?
+   (boolean #f)
+   "When true the service will print extensive information about its execution state.")
   (secrets
    (list-of-sops-secrets '())
    "The @code{sops-secret} records managed by the @code{sops-secrets-service-type}."))
@@ -150,9 +151,7 @@ when decrypting a secret.")
   (service-type (name 'sops-secrets)
                 (extensions (list (service-extension profile-service-type
                                                      (lambda (config)
-                                                       (list (sops-service-configuration-age config)
-                                                             (sops-service-configuration-gnupg config)
-                                                             (sops-service-configuration-sops config))))
+                                                       (list (sops-service-configuration-sops config))))
                                   (service-extension file-system-service-type
                                                      %sops-secrets-file-system)
                                   (service-extension activation-service-type
