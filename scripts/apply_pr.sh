@@ -27,4 +27,5 @@ git branch -r -D "forked/${branch}"
 git remote remove forked
 
 # Run guix git authenticate
+git fetch origin keyring:keyring
 guix git authenticate --cache-key=channels/sops-guix 0bbaf1fdd25266c7df790f65640aaa01e6d2dbc9 '8D10 60B9 6BB8 292E 829B  7249 AED4 1CC1 93B7 01E2'
