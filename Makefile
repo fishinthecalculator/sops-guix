@@ -5,7 +5,7 @@
 # @version 0.1
 
 check:
-	set -e; guile -L ${PWD}/modules -s tests/test-sops.scm
+	set -e; guix repl -L ${PWD}/modules -- tests/test-sops.scm
 
 clean:
 	rm -rfv ${PWD}/*.log
