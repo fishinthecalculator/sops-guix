@@ -32,6 +32,8 @@
 (define list-of-sops-secrets?
   (list-of sops-secret?))
 
+(define-maybe/no-serialization string)
+
 (define-configuration/no-serialization home-sops-service-configuration
   (gnupg
    (gexp-or-string (file-append gnupg "/bin/gpg"))
@@ -44,12 +46,13 @@
    (gexp-or-file-like)
    "A gexp or file-like object evaluating to the SOPS config file.")
   (gnupg-home
-   (string "~/.gnupg")
-   "The homedir of GnuPG, i.e. where keys used to decrypt SOPS secrets will be looked for.")
+   (maybe-string)
+   "The homedir of GnuPG, i.e. where keys used to decrypt SOPS secrets will be looked for.
+It defaults to @code{~/.gnupg}")
   (age-key-file
-   (string "~/.config/sops/age/keys.txt")
+   (maybe-string)
    "The file containing the corresponding @code{age} identities where SOPS will look for
-when decrypting a secret.")
+when decrypting a secret.  It defaults to @code{~/.config/sops/age/keys.txt}")
   (verbose?
    (boolean #f)
    "When true the service will print extensive information about its execution state.")
@@ -57,14 +60,30 @@ when decrypting a secret.")
    (list-of-sops-secrets '())
    "The @code{sops-secret} records managed by the @code{home-sops-secrets-service-type}."))
 
+(define (home-sops-service-age-key-file config)
+  (define age-key-file
+    (home-sops-service-configuration-age-key-file config))
+  (if (maybe-value-set? age-key-file)
+      age-key-file
+      (string-append (getenv "HOME")
+                     "/.config/sops/age/keys.txt")))
+
+(define (home-sops-service-gnupg-home config)
+  (define gnupg-home
+    (home-sops-service-configuration-gnupg-home config))
+  (if (maybe-value-set? gnupg-home)
+      gnupg-home
+      (string-append (getenv "HOME")
+                     "/.gnupg")))
+
 (define (home-sops-secrets-shepherd-service config)
   (when config
     (let* ((config-file
             (home-sops-service-configuration-config config))
            (age-key-file
-            (home-sops-service-configuration-age-key-file config))
+            (home-sops-service-age-key-file config))
            (gnupg-home
-            (home-sops-service-configuration-gnupg-home config))
+            (home-sops-service-gnupg-home config))
            (secrets (home-sops-service-configuration-secrets config))
            (gnupg (home-sops-service-configuration-gnupg config))
            (sops (home-sops-service-configuration-sops config))
