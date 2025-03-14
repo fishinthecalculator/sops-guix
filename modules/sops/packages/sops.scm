@@ -5,59 +5,43 @@
   #:use-module (guix download)
   #:use-module (guix gexp)
   #:use-module (guix packages)
-  #:use-module (guix build-system copy)
-  #:use-module ((guix licenses) #:prefix license:)
-  #:use-module (ice-9 match))
+  #:use-module (guix utils)
+  #:use-module (guix build-system trivial)
+  #:use-module ((guix licenses) #:prefix license:))
 
-(define %sops-version
-  "3.8.1")
-
-(define (sops-origin-file-name system)
-  (string-append "sops-" %sops-version "-" system "64"))
-
-(define (sops-origin-url system)
-  (string-append "https://github.com/getsops/sops/releases/"
-                 "download/v" %sops-version "/sops-v"
-                 %sops-version ".linux." system "64"))
-
-(define* (sops-origin-values #:key amd64-hash aarch64-hash)
-  (define system (%current-system))
-  (match (%current-system)
-    ("x86_64-linux"
-     (values (sops-origin-url "amd")
-             (sops-origin-file-name "amd")
-             amd64-hash))
-    ("aarch64-linux"
-     (values (sops-origin-url "arm")
-             (sops-origin-file-name "arm")
-             aarch64-hash))))
+(define (sops-source version suffix checksum)
+  (origin
+    (method url-fetch)
+    (uri (string-append "https://github.com/getsops/sops/releases/"
+                        "download/v" version "/sops-v" version ".linux." suffix))
+    (sha256 (base32 checksum))))
 
 (define-public sops
-  (define-values (url file-name hash)
-    (sops-origin-values
-     #:amd64-hash "15qnh4hi15i8689gnwbrkypirn624hqm48nnw34jf8cpc7xhggyn"
-     #:aarch64-hash "08fn0qx11pfifzs9s9ds973j1vzx6l876999rljk3hhdm06fkf0m"))
   (package
     (name "sops")
-    (version %sops-version)
-    (source
-     (origin
-       (method url-fetch)
-       (uri url)
-       (file-name file-name)
-       (sha256 (base32 hash))))
-    (build-system copy-build-system)
+    (version "3.9.4")
+    (source #f)
+    (native-inputs (cond ((target-aarch64?)
+                          `(("binary-source"
+                             ,(sops-source version "arm64" "0jqpxsg8ahx8n7cq8n6ybkc96hl9f4kzdzhdkrfm120x31mlqmhn"))))
+
+                         ((target-x86-64?)
+                          `(("binary-source"
+                             ,(sops-source version "amd64" "11afdrifjla52ck884bs84fbjfmbpdad0pc9mn17kpkiqhmy722l"))))
+
+                         (else '())))
+    (build-system trivial-build-system)
     (arguments
-     (list
-      ;; There's no point in substitutes.
-      #:substitutable? #f
-      #:install-plan
-      #~'((#$file-name "bin/sops"))
-      #:phases
-      #~(modify-phases %standard-phases
-          (add-before 'install 'chmod
-            (lambda _
-              (chmod #$file-name #o555))))))
+     `(#:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules (guix build utils))
+         (let* ((source (assoc-ref %build-inputs "binary-source"))
+                (dest-dir (string-append %output "/bin"))
+                (dest-file (string-append dest-dir "/sops")))
+           (mkdir-p dest-dir)
+           (copy-file source dest-file)
+           (chmod dest-file #o555)))))
     (synopsis "Simple and flexible tool for managing secrets ")
     (supported-systems '("x86_64-linux" "aarch64-linux"))
     (description "sops is an editor of encrypted files that supports YAML, JSON,
