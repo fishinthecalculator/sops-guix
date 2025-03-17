@@ -254,6 +254,7 @@ You can search for package and service definitions from this channel and many ot
 All contributions are welcome. If you have commit access please remember to setup the authentication hook with
 
 ```bash
+git fetch origin keyring:keyring
 guix git authenticate --cache-key=channels/sops-guix 0bbaf1fdd25266c7df790f65640aaa01e6d2dbc9 '8D10 60B9 6BB8 292E 829B  7249 AED4 1CC1 93B7 01E2'
 ```
 
