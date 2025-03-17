@@ -32,16 +32,17 @@
                          (else '())))
     (build-system trivial-build-system)
     (arguments
-     `(#:modules ((guix build utils))
-       #:builder
-       (begin
-         (use-modules (guix build utils))
-         (let* ((source (assoc-ref %build-inputs "binary-source"))
-                (dest-dir (string-append %output "/bin"))
-                (dest-file (string-append dest-dir "/sops")))
-           (mkdir-p dest-dir)
-           (copy-file source dest-file)
-           (chmod dest-file #o555)))))
+     (list
+      #:modules '((guix build utils))
+      #:builder
+      #~(begin
+          (use-modules (guix build utils))
+          (let* ((source #+(this-package-native-input "binary-source"))
+                 (dest-dir (string-append #$output "/bin"))
+                 (dest-file (string-append dest-dir "/sops")))
+            (mkdir-p dest-dir)
+            (copy-file source dest-file)
+            (chmod dest-file #o555)))))
     (synopsis "Simple and flexible tool for managing secrets ")
     (supported-systems '("x86_64-linux" "aarch64-linux"))
     (description "sops is an editor of encrypted files that supports YAML, JSON,
