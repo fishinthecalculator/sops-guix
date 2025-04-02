@@ -143,7 +143,7 @@ rolname = '" ,name "')) as not_exists;\n"
            (documentation "Create PostgreSQL roles.")))))
 
 (define postgresql-role-service-type
-  (service-type (name 'sops-postgres-role
+  (service-type (name 'sops-postgres-role)
                 (extensions
                  (list (service-extension shepherd-root-service-type
                                           postgresql-role-shepherd-service)))
