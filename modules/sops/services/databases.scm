@@ -130,7 +130,7 @@ rolname = '" ,name "')) as not_exists;\n"
     (log requirement)
     (list (shepherd-service
            (requirement `(postgres ,@requirement))
-           (provision '(postgres-roles))
+           (provision '(sops-postgres-roles))
            (one-shot? #t)
            (start
             #~(lambda args
