@@ -129,17 +129,19 @@ rolname = '" ,name "')) as not_exists;\n"
   (match-record config <postgresql-role-configuration>
     (log requirement)
     (list (shepherd-service
-           (requirement `(postgres ,@requirement))
+           (requirement `(user-processes postgres ,@requirement))
            (provision '(sops-postgres-roles))
            (one-shot? #t)
            (start
             #~(lambda args
-                (let ((pid (fork+exec-command
-                            (list #$(postgresql-create-roles config))
-                            #:user "postgres"
-                            #:group "postgres"
-                            #:log-file #$log)))
-                  (zero? (cdr (waitpid pid))))))
+                (zero? (spawn-command
+                        #$(postgresql-create-roles config)
+                        #:user "postgres"
+                        #:group "postgres"
+                        ;; XXX: As of Shepherd 1.0.2, #:log-file is not
+                        ;; supported.
+                        ;; #:log-file #$log
+                        ))))
            (documentation "Create PostgreSQL roles.")))))
 
 (define postgresql-role-service-type
