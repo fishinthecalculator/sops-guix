@@ -123,7 +123,7 @@ rolname = '" ,name "')) as not_exists;\n"
               (list
                #$@(map role->password-variable roles))
               " ")))
-          (execlp bash bash "-c" command)))))
+          (execlp bash bash "-x" "-c" command)))))
 
 (define (postgresql-role-shepherd-service config)
   (match-record config <postgresql-role-configuration>
