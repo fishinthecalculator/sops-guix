@@ -76,8 +76,8 @@
       (postgresql-role-password-file role))
     (if (string? file-name)
         ;; This way passwords do not leak to the command line
-        (string-append "-v \"" (password-value role)
-                       "=$(cat " file-name ")\"")
+        #~(string-append "-v \"" #$(password-value role)
+                         "=$(" #+coreutils "/bin/cat " #$file-name ")\"")
         ""))
 
   (define (roles->queries roles)
@@ -152,9 +152,10 @@ rolname = '" ,name "')) as not_exists;\n"
                 (compose concatenate)
                 (extend (lambda (config extended-roles)
                           (match-record config <postgresql-role-configuration>
-                            (roles)
+                            (host roles)
                             (postgresql-role-configuration
                              (inherit config)
+                             (host host)
                              (roles (append roles extended-roles))))))
                 (default-value (postgresql-role-configuration))
                 (description "Ensure the specified PostgreSQL roles are
