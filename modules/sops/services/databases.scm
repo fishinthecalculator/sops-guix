@@ -135,7 +135,7 @@ rolname = '" ,name "')) as not_exists;\n"
            (start
             #~(lambda args
                 (zero? (spawn-command
-                        #$(postgresql-create-roles config)
+                        (list #$(postgresql-create-roles config))
                         #:user "postgres"
                         #:group "postgres"
                         ;; XXX: As of Shepherd 1.0.2, #:log-file is not
