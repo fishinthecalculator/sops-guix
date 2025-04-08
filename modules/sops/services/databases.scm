@@ -117,7 +117,7 @@ rolname = '" ,name "')) as not_exists;\n"
               (psql #$(file-append postgresql "/bin/psql")))
           (define command
             (string-append
-             "set -e; exec " psql " -c -a -h " #$host " -f "
+             "set -e; exec " psql " -a -h " #$host " -f "
              #$(roles->queries roles) " "
              (string-join
               (list
