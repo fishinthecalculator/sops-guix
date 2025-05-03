@@ -2,5 +2,5 @@
 (channel
  (version 0)                            ;file format version
  (directory "modules")
- (news-file "etc/news.txt")
+ (news-file "etc/news.scm")
  (url "https://github.com/fishinthecalculator/sops-guix"))

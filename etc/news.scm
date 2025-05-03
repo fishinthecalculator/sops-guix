@@ -1,5 +1,12 @@
 (channel-news
   (version 0)
+  (entry (commit "a0ef8caff6182ffe99ad680a9052cf69b8eafc57")
+         (title (en "The @code{postgresql-role-service-type} changes from @code{(sops services databases)} have been upstreamed to Guix mainline (9d216d2ae9f9a4ff2935c23a209499b17dcb13a5).")
+                (it "I cambiamenti del @code{postgresql-role-service-type} in @code{(sops services databases)} sono stati inviati a Guix mainline (9d216d2ae9f9a4ff2935c23a209499b17dcb13a5)."))
+         (body (en "To migrate your configuration, it should be simply a matter of replacing every instance @code{(sops services databases)} with @code{(gnu services databases).
+The only other difference is that the @code{requirement} file of the @{postgresql-role-configuration} record has been renamed to @code{shepherd-requirement}.")
+               (it "Per migrare la tua configurazione, dovrebbe bastare sostituire ogni istanza di @code{(sops services databases)} con @code{(gnu services databases).
+L'unica altra differenza è che il campo @code{requirement} del record @{postgresql-role-configuration} è stato rinominato in @code{shepherd-requirement}.")))
   (entry (commit "fa43482b956fa9f355454e9e8939e2e2a4c78130")
          (title (en "Move channel to Github.")
                 (it "Migrazione a Github."))
