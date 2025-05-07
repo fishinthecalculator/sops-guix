@@ -65,7 +65,7 @@
          (define (gpg-key-exists? key)
            #t)
 
-         (define (gpg-import))
+         (define (gpg-import) 1)
 
          (define-values (age-key-derivation-status age-key)
            (generate-age-key))
