@@ -60,7 +60,9 @@
 
           (if #$generate-key?
               (if (file-exists? #$host-ssh-key)
-                  (invoke #$(generate-host-key host-ssh-key gnupg-home age-key-file
+                  (invoke #$(generate-host-key age-key-file
+                                               gnupg-home
+                                               gpg-command
                                                #:host-ssh-key host-ssh-key
                                                #:verbose? verbose?))
                   (format #t "'~a' does not exist so no host key can be generated...~%"
@@ -70,6 +72,7 @@
           (format #t "setting up secrets in '~a'...~%" secrets-directory)
           (unless (file-exists? secrets-directory)
             (mkdir-p secrets-directory))
+
           ;; Cleanup secrets symlink
           (when (file-exists? extra-links-directory)
             (for-each
@@ -81,6 +84,7 @@
                  (format #t "Deleting ~a -> ~a...~%" link-path link-target)
                  (delete-file-recursively link-target)))
              (list-content extra-links-directory)))
+
           ;; Cleanup secrets
           (for-each (compose delete-file-recursively
                              (cut string-append secrets-directory "/" <>))
