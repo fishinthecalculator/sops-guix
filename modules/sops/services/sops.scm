@@ -108,6 +108,8 @@ when decrypting a secret.")
             (sops-service-configuration-config config))
            (generate-key?
             (sops-service-configuration-generate-key? config))
+           (host-ssh-key
+            (sops-service-configuration-host-ssh-key config))
            (age-key-file
             (sops-service-configuration-age-key-file config))
            (gnupg-home
@@ -139,6 +141,7 @@ when decrypting a secret.")
                                                                 sops gnupg
                                                                 #:secrets-directory secrets-directory
                                                                 #:generate-key? generate-key?
+                                                                #:host-ssh-key host-ssh-key
                                                                 #:verbose? verbose?)))))
                          (stop
                           #~(make-kill-destructor)))))))
