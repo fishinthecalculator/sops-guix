@@ -1,12 +1,12 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-;;; Copyright © 2024 Giacomo Leidi <goodoldpaul@autistici.org>
+;;; Copyright © 2024, 2025 Giacomo Leidi <goodoldpaul@autistici.org>
 
 (define-module (sops activation)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages gnupg)
   #:use-module (guix gexp)
+  #:use-module (sops derive)
   #:use-module (sops secrets)
-  #:use-module (sops packages utils)
   #:export (activate-secrets))
 
 (define* (activate-secrets config-file
@@ -15,17 +15,16 @@
                            sops-secrets
                            sops-package
                            gpg-command
-                           #:key (secrets-directory #f)
-                                 (generate-key? #f)
-                                 (verbose? #f))
+                           #:key (host-ssh-key "/etc/ssh/ssh_host_rsa_key")
+                           (secrets-directory #f)
+                           (generate-key? #f)
+                           (verbose? #f))
   "Return an activation gexp for provided secrets."
-  (let* ((bash (file-append bash-minimal "/bin/bash"))
-         (generate-host-key.sh
-          (file-append sops-guix-utils "/bin/generate-host-key.sh"))
-         (secrets
-          (map lower-sops-secret sops-secrets))
-         (sops
-          (file-append sops-package "/bin/sops")))
+  (let ((bash (file-append bash-minimal "/bin/bash"))
+        (secrets
+         (map lower-sops-secret sops-secrets))
+        (sops
+         (file-append sops-package "/bin/sops")))
 
     (with-imported-modules '((guix build utils))
       #~(begin
@@ -34,12 +33,15 @@
                        (srfi srfi-26)
                        (ice-9 ftw)
                        (ice-9 match))
+
           (define secrets-directory
             (if #$secrets-directory
                 #$secrets-directory
                 (string-append "/run/user/" (number->string (getuid)) "/secrets")))
+
           (define extra-links-directory
             (string-append secrets-directory "/extra"))
+
           (define* (list-content directory #:key (exclude '()))
             (scandir directory
                      (lambda (file)
@@ -57,12 +59,20 @@
                         "SOPS_GPG_EXEC")))
 
           (if #$generate-key?
-              (invoke #$generate-host-key.sh)
+              (if (file-exists? #$host-ssh-key)
+                  (invoke #$(generate-host-key age-key-file
+                                               gnupg-home
+                                               gpg-command
+                                               #:host-ssh-key host-ssh-key
+                                               #:verbose? verbose?))
+                  (format #t "'~a' does not exist so no host key can be generated...~%"
+                          #$host-ssh-key))
               (format #t "no host key will be generated...~%"))
 
           (format #t "setting up secrets in '~a'...~%" secrets-directory)
           (unless (file-exists? secrets-directory)
             (mkdir-p secrets-directory))
+
           ;; Cleanup secrets symlink
           (when (file-exists? extra-links-directory)
             (for-each
@@ -74,6 +84,7 @@
                  (format #t "Deleting ~a -> ~a...~%" link-path link-target)
                  (delete-file-recursively link-target)))
              (list-content extra-links-directory)))
+
           ;; Cleanup secrets
           (for-each (compose delete-file-recursively
                              (cut string-append secrets-directory "/" <>))
@@ -113,7 +124,7 @@
                   (for-each
                    (lambda (file)
                      (when #$verbose?
-                       (format #t "Changing owner of ~a to ~a:~a" file uid gid))
+                       (format #t "Changing owner of ~a to ~a:~a~%" file uid gid))
                      (chown file uid gid))
                    (find-files (first (string-split derived-name #\/))
                                #:directories? #t)))
