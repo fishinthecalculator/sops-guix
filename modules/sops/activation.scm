@@ -60,7 +60,9 @@
 
           (if #$generate-key?
               (if (file-exists? #$host-ssh-key)
-                  (invoke #$(generate-host-key host-ssh-key gnupg-home age-key-file))
+                  (invoke #$(generate-host-key host-ssh-key gnupg-home age-key-file
+                                               #:host-ssh-key host-ssh-key
+                                               #:verbose? verbose?))
                   (format #t "'~a' does not exist so no host key can be generated...~%"
                           #$host-ssh-key))
               (format #t "no host key will be generated...~%"))
