@@ -52,6 +52,8 @@
             key))
 
          (define (age-store key)
+           (when #$verbose?
+             (format #t "Appending age key to ~a.~%" invocation))
            (let* ((port (open-file #$age-key-file "a")))
              (format port "~a~%" key)
              (close-port port)))
