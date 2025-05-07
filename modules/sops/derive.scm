@@ -40,9 +40,11 @@
            (status:exit-val (apply system* invocation)))
 
          (define (generate-age-key)
-           (slurp
-            '(#$(file-append ssh-to-age "/bin/ssh-to-age")
-              "-i" #$host-ssh-key "-private-key")))
+           (with-error-to-file "/dev/null"
+             (lambda _
+               (slurp
+                '(#$(file-append ssh-to-age "/bin/ssh-to-age")
+                  "-i" #$host-ssh-key "-private-key")))))
 
          (define (age-key-exists? key)
            (string-contains
@@ -55,12 +57,14 @@
              (close-port port)))
 
          (define (generate-gpg-key)
-           (slurp '(#$(file-append ssh-to-pgp "/bin/ssh-to-pgp")
-                    "-comment" "Imported from SSH"
-                    "-email" "root@localhost"
-                    "-format" "armor"
-                    "-name" "root"
-                    "-i" #$host-ssh-key "-private-key")))
+           (with-error-to-file "/dev/null"
+             (lambda _
+               (slurp '(#$(file-append ssh-to-pgp "/bin/ssh-to-pgp")
+                        "-comment" "Imported from SSH"
+                        "-email" "root@localhost"
+                         "-format" "armor"
+                         "-name" "root"
+                        "-i" #$host-ssh-key "-private-key")))))
 
          (define (gpg-key-exists? key)
            #t)
