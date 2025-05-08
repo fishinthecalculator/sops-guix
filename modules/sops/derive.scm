@@ -71,7 +71,7 @@
            (define commands
              '((#$gpg-command "--list-packets")
                (#$(file-append grep "/bin/grep") "keyid: ")
-               (#$(file-append sed "/bin/sed") "-E" "s/^.*keyid: ([^[:space:]]+)[[:space:]]*$/\1/")))
+               (#$(file-append sed "/bin/sed") "-E" "s/^.*keyid: ([^[:space:]]+)[[:space:]]*$/\\1/")))
 
            (receive (from to pids)
                (pipeline (pk 'commands commands))
