@@ -2,6 +2,7 @@
 ;;; Copyright © 2025 Giacomo Leidi <goodoldpaul@autistici.org>
 
 (define-module (sops derive)
+  #:use-module (gnu packages base)
   #:use-module (gnu packages crypto)
   #:use-module (gnu packages password-utils)
   #:use-module (guix gexp)
@@ -34,8 +35,8 @@
                   (output (get-string-all port))
                   (status (close-pipe port)))
              (pk 'status status)
-             (pk 'exit-val (status:exit-val status))
-             (values (status:exit-val status) output)))
+             (pk 'output output)
+             (values status output)))
 
          (define (run-command invocation)
            (when #$verbose?
@@ -66,20 +67,56 @@
              (close-port port)
              (chmod #$age-key-file #o400)))
 
+         (define (compute-gpg-key-id key)
+           (define commands
+             '((#$gpg-command "--import-options" "show-only" "--import")
+               (#$(file-append grep "/bin/grep") "-E" "-A" "1" "sec(#)?")
+               (#$(file-append coreutils "/bin/tail") "-1")))
+           (receive (from to pids)
+               (pipeline (pk 'commands commands))
+             (format to "~a" (pk 'key key))
+             (close to)
+             (let ((output (read-line from)))
+               (close from)
+               (waitpid (first pids))
+               (pk 'id-output output)
+               (and (string? output)
+                    (not (string=? "" output))
+                    output))))
+
          (define (generate-gpg-key)
            (with-error-to-file "/dev/null"
              (lambda _
-               (slurp '(#$(file-append ssh-to-pgp "/bin/ssh-to-pgp")
-                        "-comment" "Imported from SSH"
-                        "-email" "root@localhost"
-                         "-format" "armor"
-                         "-name" "root"
-                        "-i" #$host-ssh-key "-private-key")))))
+               (let*-values (((status key)
+                              (slurp '(#$(file-append ssh-to-pgp "/bin/ssh-to-pgp")
+                                       "-comment" "Imported from SSH"
+                                       "-email" "root@localhost"
+                                        "-format" "armor"
+                                        "-name" "root"
+                                       "-i" #$host-ssh-key "-private-key")))
+                             ((id-status key-id)
+                              (let ((id
+                                     (and (zero? status)
+                                          (compute-gpg-key-id key))))
+                                (values (if id status 256) id))))
 
-         (define (gpg-key-exists? key)
-           #t)
 
-         (define (gpg-import) 1)
+                 (values (+ status id-status) key key-id)))))
+
+         (define (gpg-key-exists? gpg-key-id)
+           (let-values (((status keys)
+                         (slurp
+                          '(#$gpg-command "--list-secret-keys"))))
+             (and (zero? status)
+                  (string-contains-ci keys gpg-key-id))))
+
+         (define (gpg-import key)
+           (let* ((port (open-input-pipe
+                         (string-append #$gpg-command " --import")))
+                  (input (format port "~a" key))
+                  (status (close-pipe port)))
+             (pk 'import-status status)
+             (pk 'import-input input)))
 
          (define-values (age-key-derivation-status age-key)
            (generate-age-key))
@@ -89,12 +126,12 @@
                  (format #t "Derived age key already exists at ~a.~%"
                          #$age-key-file)
                  (age-store age-key))
-             (let-values (((gpg-key-derivation-status gpg-key)
+             (let-values (((gpg-key-derivation-status gpg-key gpg-key-id)
                            (generate-gpg-key)))
                (if (zero? gpg-key-derivation-status)
-                   (if (gpg-key-exists? gpg-key)
+                   (if (pk 'gpg-exists? (gpg-key-exists? (pk 'gpg-key-id gpg-key-id)))
                        (format #t "Derived GnuPG key already exists at ~a.~%"
                                #$gnupg-home)
-                       (gpg-import))
+                       (gpg-import key))
                    (format #t "No SOPS compatible key could be generated from ~a.~%"
                            #$host-ssh-key))))))))
