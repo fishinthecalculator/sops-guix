@@ -90,8 +90,8 @@ ignored.")
    "The homedir of GnuPG, i.e. where keys used to decrypt SOPS secrets will be looked for.")
   (age-key-file
    (string "/root/.config/sops/age/keys.txt")
-   "The file containing the corresponding @code{age} identities where SOPS will look for
-when decrypting a secret.")
+   "The absolute path of the file containing the corresponding @code{age}
+identities where SOPS should look for when decrypting a secret.")
   (secrets-directory
    (string "/run/secrets")
    "The path on the filesystem where the secrets will be decrypted.")
