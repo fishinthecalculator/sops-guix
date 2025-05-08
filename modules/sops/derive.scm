@@ -20,9 +20,12 @@
                       (ice-9 format)
                       (ice-9 popen)
                       (ice-9 rdelim)
+                      (ice-9 receive)
                       (ice-9 textual-ports)
                       (srfi srfi-1)
                       (srfi srfi-11))
+
+         (setenv "GNUPGHOME" #$gnupg-home)
 
          (define (slurp invocation)
            (when #$verbose?
@@ -47,16 +50,21 @@
                   "-i" #$host-ssh-key "-private-key")))))
 
          (define (age-key-exists? key)
-           (string-contains
-            (call-with-input-file #$age-key-file get-string-all)
-            key))
+           (and
+            (file-exists? #$age-key-file)
+            (integer?
+             (string-contains
+              (call-with-input-file #$age-key-file get-string-all)
+              (string-trim-both key)))))
 
          (define (age-store key)
            (when #$verbose?
-             (format #t "Appending age key to ~a.~%" invocation))
-           (let* ((port (open-file #$age-key-file "a")))
-             (format port "~a~%" key)
-             (close-port port)))
+             (format #t "Appending age key to ~a.~%" #$age-key-file))
+           (mkdir-p (dirname #$age-key-file))
+           (let ((port (open-file #$age-key-file "a")))
+             (format port "~a" key)
+             (close-port port)
+             (chmod #$age-key-file #o400)))
 
          (define (generate-gpg-key)
            (with-error-to-file "/dev/null"
