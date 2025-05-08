@@ -69,9 +69,10 @@
 
          (define (compute-gpg-key-id key)
            (define commands
-             '((#$gpg-command "--import-options" "show-only" "--import")
-               (#$(file-append grep "/bin/grep") "-E" "-A" "1" "sec(#)?")
-               (#$(file-append coreutils "/bin/tail") "-1")))
+             '((#$gpg-command "--list-packets")
+               (#$(file-append grep "/bin/grep") "keyid: ")
+               (#$(file-append sed "/bin/sed") "-E" "s/^.*keyid: ([^[:space:]]+)[[:space:]]*$/\1/")))
+
            (receive (from to pids)
                (pipeline (pk 'commands commands))
              (format to "~a" (pk 'key key))
@@ -99,7 +100,6 @@
                                      (and (zero? status)
                                           (compute-gpg-key-id key))))
                                 (values (if id status 256) id))))
-
 
                  (values (+ status id-status) key key-id)))))
 
