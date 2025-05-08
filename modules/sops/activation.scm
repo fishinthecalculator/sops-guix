@@ -124,7 +124,7 @@
                   (for-each
                    (lambda (file)
                      (when #$verbose?
-                       (format #t "Changing owner of ~a to ~a:~a" file uid gid))
+                       (format #t "Changing owner of ~a to ~a:~a~%" file uid gid))
                      (chown file uid gid))
                    (find-files (first (string-split derived-name #\/))
                                #:directories? #t)))
