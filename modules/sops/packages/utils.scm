@@ -4,7 +4,7 @@
 (define-module (sops packages utils)
   #:use-module (gnu packages base)
   #:use-module (gnu packages bash)
-  #:use-module (gnu packages crypto)
+  #:use-module (gnu packages golang-crypto)
   #:use-module (gnu packages gnupg)
   #:use-module (guix gexp)
   #:use-module (guix git-download)
