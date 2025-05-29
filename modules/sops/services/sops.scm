@@ -34,6 +34,7 @@
             sops-service-configuration-sops
             sops-service-configuration-config
             sops-service-configuration-generate-key?
+            sops-service-configuration-host-ssh-key
             sops-service-configuration-gnupg-home
             sops-service-configuration-age-key-file
             sops-service-configuration-verbose?
@@ -72,17 +73,25 @@ are:
    "A gexp or file-like object evaluating to the SOPS config file.")
   (generate-key?
    (boolean #f)
-   "When true a GPG key will be derived from the host SSH RSA key with
-@code{ssh-to-pgp} and added to the keyring located at
-@code{gnupg-home} field value. It is discouraged and you are
-more than welcome to provide your own key in the keyring.")
+   "When true, a SOPS supported key will be derived from the host SSH private
+key.  For RSA keys @code{ssh-to-pgp} is used and the generated key is added to
+the keyring located at @code{gnupg-home} field value.  For ed25519 keys
+@code{ssh-to-age} is used and the generated key is appended to the keyring file
+located at @code{age-key-file} field value.  It is discouraged to generate key
+this way, unless for bootstrapping.  You are more than welcome to provision (and
+rotate) your own SOPS compatible keys.")
+  (host-ssh-key
+   (string "/etc/ssh/ssh_host_rsa_key")
+   "The file system path of the SSH private key used for automatic derivation of
+a SOPS compatible key.  If the @code{generate-key?} field is false, this field is
+ignored.")
   (gnupg-home
    (string "/root/.gnupg")
    "The homedir of GnuPG, i.e. where keys used to decrypt SOPS secrets will be looked for.")
   (age-key-file
    (string "/root/.config/sops/age/keys.txt")
-   "The file containing the corresponding @code{age} identities where SOPS will look for
-when decrypting a secret.")
+   "The absolute path of the file containing the corresponding @code{age}
+identities where SOPS should look for when decrypting a secret.")
   (secrets-directory
    (string "/run/secrets")
    "The path on the filesystem where the secrets will be decrypted.")
@@ -99,6 +108,8 @@ when decrypting a secret.")
             (sops-service-configuration-config config))
            (generate-key?
             (sops-service-configuration-generate-key? config))
+           (host-ssh-key
+            (sops-service-configuration-host-ssh-key config))
            (age-key-file
             (sops-service-configuration-age-key-file config))
            (gnupg-home
@@ -130,6 +141,7 @@ when decrypting a secret.")
                                                                 sops gnupg
                                                                 #:secrets-directory secrets-directory
                                                                 #:generate-key? generate-key?
+                                                                #:host-ssh-key host-ssh-key
                                                                 #:verbose? verbose?)))))
                          (stop
                           #~(make-kill-destructor)))))))
