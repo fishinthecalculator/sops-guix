@@ -3,7 +3,7 @@
 
 (define-module (sops derive)
   #:use-module (gnu packages base)
-  #:use-module (gnu packages crypto)
+  #:use-module (gnu packages golang-crypto)
   #:use-module (gnu packages password-utils)
   #:use-module (guix gexp)
   #:export (generate-host-key))
