@@ -27,10 +27,14 @@
             home-sops-service-configuration-gnupg-home
             home-sops-service-configuration-age-key-file
             home-sops-service-configuration-verbose?
-            home-sops-service-configuration-secrets))
+            home-sops-service-configuration-secrets
+            home-sops-service-configuration-shepherd-requirement))
 
 (define list-of-sops-secrets?
   (list-of sops-secret?))
+
+(define list-of-sops-symbols?
+  (list-of symbol?))
 
 (define-maybe/no-serialization string)
 
@@ -58,7 +62,10 @@ when decrypting a secret.  It defaults to @code{~/.config/sops/age/keys.txt}")
    "When true the service will print extensive information about its execution state.")
   (secrets
    (list-of-sops-secrets '())
-   "The @code{sops-secret} records managed by the @code{home-sops-secrets-service-type}."))
+   "The @code{sops-secret} records managed by the @code{home-sops-secrets-service-type}.")
+  (shepherd-requirement
+   (list-of-symbols '())
+   "List of Home shepherd services that must be started before decrypting SOPS secrets."))
 
 (define (home-sops-service-age-key-file config)
   (define age-key-file
@@ -84,13 +91,14 @@ when decrypting a secret.  It defaults to @code{~/.config/sops/age/keys.txt}")
             (home-sops-service-age-key-file config))
            (gnupg-home
             (home-sops-service-gnupg-home config))
+           (shepherd-req (home-sops-service-configuration-shepherd-requirement config))
            (secrets (home-sops-service-configuration-secrets config))
            (gnupg (home-sops-service-configuration-gnupg config))
            (sops (home-sops-service-configuration-sops config))
            (verbose? (home-sops-service-configuration-sops config)))
       (list
        (shepherd-service (provision '(home-sops-secrets))
-                         (requirement '())
+                         (requirement shepherd-req)
                          (one-shot? #t)
                          (documentation
                           "SOPS secrets decrypting home service.")
