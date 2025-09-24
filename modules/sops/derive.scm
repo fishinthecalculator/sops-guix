@@ -26,7 +26,10 @@
                       (srfi srfi-1)
                       (srfi srfi-11))
 
-         (setenv "GNUPGHOME" #$gnupg-home)
+         (define age-key-file #$age-key-file)
+         (define gnupg-home #$gnupg-home)
+
+         (setenv "GNUPGHOME" gnupg-home)
 
          (define (slurp invocation)
            (when #$verbose?
@@ -50,20 +53,20 @@
 
          (define (age-key-exists? key)
            (and
-            (file-exists? #$age-key-file)
+            (file-exists? age-key-file)
             (integer?
              (string-contains
-              (call-with-input-file #$age-key-file get-string-all)
+              (call-with-input-file age-key-file get-string-all)
               (string-trim-both key)))))
 
          (define (age-store key)
            (when #$verbose?
-             (format #t "Appending age key to ~a.~%" #$age-key-file))
-           (mkdir-p (dirname #$age-key-file))
-           (let ((port (open-file #$age-key-file "a")))
+             (format #t "Appending age key to ~a.~%" age-key-file))
+           (mkdir-p (dirname age-key-file))
+           (let ((port (open-file age-key-file "a")))
              (format port "~a" key)
              (close-port port)
-             (chmod #$age-key-file #o400)))
+             (chmod age-key-file #o400)))
 
          (define (compute-gpg-key-id key)
            (define commands
@@ -120,14 +123,14 @@
          (if (zero? age-key-derivation-status)
              (if (age-key-exists? age-key)
                  (format #t "Derived age key already exists at ~a.~%"
-                         #$age-key-file)
+                         age-key-file)
                  (age-store age-key))
              (let-values (((gpg-key-derivation-status gpg-key gpg-key-id)
                            (generate-gpg-key)))
                (if (zero? gpg-key-derivation-status)
                    (if (gpg-key-exists? gpg-key-id)
                        (format #t "Derived GnuPG key already exists at ~a.~%"
-                               #$gnupg-home)
+                               gnupg-home)
                        (gpg-import key))
                    (format #t "No SOPS compatible key could be generated from ~a.~%"
                            #$host-ssh-key))))))))

@@ -34,6 +34,9 @@
                        (ice-9 ftw)
                        (ice-9 match))
 
+          (define age-key-file #$age-key-file)
+          (define gnupg-home #$gnupg-home)
+
           (define secrets-directory
             (if #$secrets-directory
                 #$secrets-directory
@@ -48,8 +51,8 @@
                        (not (member file `("." ".." ,@exclude))))
                      string<?))
 
-          (setenv "SOPS_AGE_KEY_FILE" #$age-key-file)
-          (setenv "GNUPGHOME" #$gnupg-home)
+          (setenv "SOPS_AGE_KEY_FILE" age-key-file)
+          (setenv "GNUPGHOME" gnupg-home)
           (setenv "SOPS_GPG_EXEC" #$gpg-command)
           (when #$verbose?
             (for-each (lambda (var)

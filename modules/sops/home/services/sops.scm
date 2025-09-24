@@ -1,5 +1,5 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-;;; Copyright © 2024 Giacomo Leidi <goodoldpaul@autistici.org>
+;;; Copyright © 2024, 2025 Giacomo Leidi <goodoldpaul@autistici.org>
 
 (define-module (sops home services sops)
   #:use-module (gnu home services)
@@ -72,16 +72,16 @@ when decrypting a secret.  It defaults to @code{~/.config/sops/age/keys.txt}")
     (home-sops-service-configuration-age-key-file config))
   (if (maybe-value-set? age-key-file)
       age-key-file
-      (string-append (getenv "HOME")
-                     "/.config/sops/age/keys.txt")))
+      #~(string-append (getenv "HOME")
+                       "/.config/sops/age/keys.txt")))
 
 (define (home-sops-service-gnupg-home config)
   (define gnupg-home
     (home-sops-service-configuration-gnupg-home config))
   (if (maybe-value-set? gnupg-home)
       gnupg-home
-      (string-append (getenv "HOME")
-                     "/.gnupg")))
+      #~(string-append (getenv "HOME")
+                       "/.gnupg")))
 
 (define (home-sops-secrets-shepherd-service config)
   (when config
