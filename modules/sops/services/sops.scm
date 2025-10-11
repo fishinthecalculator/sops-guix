@@ -20,6 +20,9 @@
   #:use-module (srfi srfi-1)
   #:export (sops-secrets-service-type
 
+            %default-sops-secrets-directory
+            sops-secret->secret-file
+
             sops-public-key
             sops-public-key?
             sops-public-key-fields
@@ -43,6 +46,16 @@
 
 (define list-of-sops-secrets?
   (list-of sops-secret?))
+
+(define %default-sops-secrets-directory
+  "/run/secrets")
+
+(define* (sops-secret->secret-file secret #:key
+                                   (directory %default-sops-secrets-directory))
+  "Return the actual file name of SECRET on the filesystem.  The keyword
+argument DIRECTORY allows overriding the default directory where secrets are
+stored."
+  (string-append directory "/" (sops-secret->file-name secret)))
 
 (define-configuration/no-serialization sops-public-key
   (name
@@ -93,7 +106,7 @@ ignored.")
    "The absolute path of the file containing the corresponding @code{age}
 identities where SOPS should look for when decrypting a secret.")
   (secrets-directory
-   (string "/run/secrets")
+   (string %default-sops-secrets-directory)
    "The path on the filesystem where the secrets will be decrypted.")
   (verbose?
    (boolean #f)
