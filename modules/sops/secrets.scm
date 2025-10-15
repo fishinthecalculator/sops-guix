@@ -1,5 +1,5 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-;;; Copyright © 2024 Giacomo Leidi <goodoldpaul@autistici.org>
+;;; Copyright © 2024 Giacomo Leidi <therewasa@fishinthecalculator.me>
 
 (define-module (sops secrets)
   #:use-module (gnu services configuration)
