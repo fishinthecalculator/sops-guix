@@ -111,7 +111,6 @@
                      (command
                       `(#$sops "-d"
                         "--extract" ,key
-                        "--output" ,output
                         ,@(if output-type
                               `("--output-type" ,output-type)
                               '())
@@ -120,7 +119,18 @@
                 (when #$verbose?
                   (format #t "Running~{ ~a~}~%" command))
                 (mkdir-p (dirname output))
-                (apply invoke command)
+
+                ;; First, create a temporary file
+                (let* ((port (mkstemp (string-append (dirname output)
+                                                     "/secret-XXXXXX")))
+                       (tmp (port-filename port)))
+                  ;; Set it read/write only for the current user
+                  (chmod port #o600)
+                  ;; Write the secret
+                  (spawn #$sops command #:output port)
+                  (close-port port)
+                  ;; Rename the temporary file to its actual name
+                  (rename-file tmp output))
 
                 ;; Setting owner is supported only in the system service
                 (when (= (getuid) 0)
