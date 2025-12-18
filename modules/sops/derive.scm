@@ -111,9 +111,9 @@
                   (string-contains-ci keys gpg-key-id))))
 
          (define (gpg-import key)
-           (let* ((port (open-input-pipe
+           (let* ((port (open-output-pipe
                          (string-append #$gpg-command " --import")))
-                  (input (format port "~a" key))
+                  (input (display key port))
                   (status (close-pipe port)))
              input))
 
@@ -131,6 +131,6 @@
                    (if (gpg-key-exists? gpg-key-id)
                        (format #t "Derived GnuPG key already exists at ~a.~%"
                                gnupg-home)
-                       (gpg-import key))
+                       (gpg-import gpg-key))
                    (format #t "No SOPS compatible key could be generated from ~a.~%"
                            #$host-ssh-key))))))))
