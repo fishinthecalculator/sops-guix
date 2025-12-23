@@ -10,6 +10,24 @@ This channels exposes the `sops-secrets-service-type` Guix service and the `sops
 
 Assuming that the right private keys are also provided, `sops-secret`s can be included in Guix images, deployed with `guix deploy` and included in Guix System/Home containers.
 
+#### How secrets can be used
+
+Secrets are provisioned as files (usually) under `/run/secrets`. How to use them really depends on which application you need the secret for. As an example, restic is a program to do encrypted backups and it supports a `--password-file` CLI option. Secret files can be to restore a backup like so:
+
+``` bash
+restic --repository rclone:onedrive:backup --password-file /run/secrets/restic restore --target ./restored latest
+```
+
+Some applications expect secrets to be provided as environment variables, in which case the application entrypoint can be wrapped in a bash script like the following:
+
+``` bash
+read -d $'\x04' variable < /run/user/$UID/secrets/super_secret_password
+export variable
+./application_entrypoint
+```
+
+The purpose of `sops-guix` is simply to safely bring secrets from your Guix configuration to one or more machines, after that it is up to applications and users to figure out how to use them.
+
 ### Creating secrets with SOPS
 
 First of all you need to create encrypted secrets with SOPS. To do so I'm assuming you already have a GPG key for yourself and the machines you want to deploy secrets to. You should be able to list the private keys you have in your keyring with
