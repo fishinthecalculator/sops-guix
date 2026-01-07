@@ -26,9 +26,18 @@
         (sops
          (file-append sops-package "/bin/sops")))
 
-    (with-imported-modules '((guix build utils))
+    (with-imported-modules '((guix build utils)
+                             (guix build syscalls)
+                             (guix config)
+                             (guix colors)
+                             (guix diagnostics)
+                             (guix i18n)
+                             (guix memoization)
+                             (guix profiling)
+                             (guix utils))
       #~(begin
           (use-modules (guix build utils)
+                       (guix utils)
                        (srfi srfi-1)
                        (srfi srfi-26)
                        (ice-9 ftw)
@@ -120,17 +129,12 @@
                   (format #t "Running~{ ~a~}~%" command))
                 (mkdir-p (dirname output))
 
-                ;; First, create a temporary file
-                (let* ((port (mkstemp (string-append (dirname output)
-                                                     "/secret-XXXXXX")))
-                       (tmp (port-filename port)))
-                  ;; Set it read/write only for the current user
-                  (chmod port #o600)
-                  ;; Write the secret
-                  (spawn #$sops command #:output port)
-                  (close-port port)
-                  ;; Rename the temporary file to its actual name
-                  (rename-file tmp output))
+                (with-atomic-file-output output
+                  (lambda (port)
+                    ;; Set it read/write only for the current user
+                    (chmod port #o600)
+                    ;; Write the secret
+                    (spawn #$sops command #:output port)))
 
                 ;; Setting owner is supported only in the system service
                 (when (= (getuid) 0)
