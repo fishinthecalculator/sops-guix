@@ -1,0 +1,13 @@
+keys:
+    - &user_tester_age age1ctmqv7l7jep64w9nea6xlvfatxt9rtyl88jszcycfea59x6hxcsqpakxjy
+    - &host_komputilo 0C59A513D163688D280F9AFA5EB8AAF08C879499
+    - &host_komputilo_age age16mhhz8lsra7h0z60h89xwhsdhphxqgr88hqu0hky4kt67qpp0vrs0xp556
+
+creation_rules:
+    - path_regex: .*komputilo\.yaml$
+      key_groups:
+          - age:
+                - *user_tester_age
+                - *host_komputilo_age
+            pgp:
+                - *host_komputilo
