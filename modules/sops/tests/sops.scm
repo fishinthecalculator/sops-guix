@@ -170,6 +170,8 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
           (test-assert "secret created"
             (wait-for-file "/run/secrets/restic" marionette))
 
+          (sleep 5)
+
           (test-equal "secret content is sound"
             "hello world"
             (marionette-eval
@@ -247,6 +249,8 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
 
           (test-assert "secret created"
             (wait-for-file "/run/secrets/restic" marionette))
+
+          (sleep 5)
 
           (test-equal "secret content is sound"
             "hello world"
