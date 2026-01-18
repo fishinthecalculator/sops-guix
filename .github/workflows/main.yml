@@ -9,7 +9,12 @@ on:
         - '.gitignore'
         - README.*
         - LICENSE
-        - 'etc/**'
+        - 'etc/news.scm'
+        - 'etc/snippets/**'
+        - scripts/**
+        - .dir-locals.el
+        - .guix-authorizations
+        - .guix-channel
 
   push:
     # Sequence of patterns matched against refs/tags
@@ -18,7 +23,12 @@ on:
         - '.gitignore'
         - README.*
         - LICENSE
-        - 'etc/**'
+        - 'etc/news.scm'
+        - 'etc/snippets/**'
+        - scripts/**
+        - .dir-locals.el
+        - .guix-authorizations
+        - .guix-channel
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -26,12 +36,12 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   run-tests:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v3
-      - name: Install GNU Guix
-        uses: PromyLOPh/guix-install-action@v1.6
-
+      - uses: actions/checkout@v6
       # Runs a set of commands using the runners shell
-      - name: Run tests
+      - name: Run unit tests
         run: guix shell guile make -- make check
+
+      - name: Run integration tests
+        run: guix build -L $(pwd)/modules -m etc/manifests/system-tests.scm
