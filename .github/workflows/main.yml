@@ -9,7 +9,8 @@ on:
         - '.gitignore'
         - README.*
         - LICENSE
-        - 'etc/**'
+        - 'etc/news.scm'
+        - 'etc/snippets/**'
 
   push:
     # Sequence of patterns matched against refs/tags
@@ -18,7 +19,8 @@ on:
         - '.gitignore'
         - README.*
         - LICENSE
-        - 'etc/**'
+        - 'etc/news.scm'
+        - 'etc/snippets/**'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -29,9 +31,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: Install GNU Guix
         uses: PromyLOPh/guix-install-action@v1.6
+        with:
+          channels: |-
+            (cons
+             (channel
+              (name 'sops-guix)
+              (url "https://github.com/fishinthecalculator/sops-guix.git")
+              (branch "main")
+              (introduction
+               (make-channel-introduction
+                "0bbaf1fdd25266c7df790f65640aaa01e6d2dbc9"
+                (openpgp-fingerprint
+                 "8D10 60B9 6BB8 292E 829B  7249 AED4 1CC1 93B7 01E2"))))
+             %default-channels)
 
       # Runs a set of commands using the runners shell
-      - name: Run tests
+      - name: Run unit tests
         run: guix shell guile make -- make check
+
+      - name: Run integration tests
+        run: guix build -L $(pwd)/modules -m etc/manifests/system-tests.scm
