@@ -1,5 +1,5 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-;;; Copyright © 2025 Giacomo Leidi <therewasa@fishinthecalculator.me>
+;;; Copyright © 2025, 2026 Giacomo Leidi <therewasa@fishinthecalculator.me>
 
 (define-module (sops derive)
   #:use-module (gnu packages base)
@@ -12,7 +12,7 @@
                             gnupg-home
                             gpg-command
                             #:key (host-ssh-key "/etc/ssh/ssh_host_rsa_key")
-                            (verbose? #f))
+                            verbose?)
   (with-imported-modules '((guix build utils))
     (program-file
      "generate-host-key"
@@ -33,7 +33,7 @@
 
          (define (slurp invocation)
            (when #$verbose?
-             (format #t "Running~{ ~a~}~%" invocation))
+             (format (current-error-port) "Running~{ ~a~}~%" invocation))
            (let* ((port (apply open-pipe* OPEN_READ invocation))
                   (output (get-string-all port))
                   (status (close-pipe port)))
@@ -41,7 +41,7 @@
 
          (define (run-command invocation)
            (when #$verbose?
-             (format #t "Running~{ ~a~}~%" invocation))
+             (format (current-error-port) "Running~{ ~a~}~%" invocation))
            (status:exit-val (apply system* invocation)))
 
          (define (generate-age-key)
@@ -61,7 +61,8 @@
 
          (define (age-store key)
            (when #$verbose?
-             (format #t "Appending age key to ~a.~%" age-key-file))
+             (format
+              (current-error-port) "Appending age key to ~a.~%" age-key-file))
            (mkdir-p (dirname age-key-file))
            (let ((port (open-file age-key-file "a")))
              (format port "~a" key)
@@ -72,7 +73,8 @@
            (define commands
              '((#$gpg-command "--list-packets")
                (#$(file-append grep "/bin/grep") "keyid: ")
-               (#$(file-append sed "/bin/sed") "-E" "s/^.*keyid: ([^[:space:]]+)[[:space:]]*$/\\1/")))
+               (#$(file-append sed "/bin/sed")
+                "-E" "s/^.*keyid: ([^[:space:]]+)[[:space:]]*$/\\1/")))
 
            (receive (from to pids)
                (pipeline commands)
@@ -92,8 +94,8 @@
                               (slurp '(#$(file-append ssh-to-pgp "/bin/ssh-to-pgp")
                                        "-comment" "Imported from SSH"
                                        "-email" "root@localhost"
-                                        "-format" "armor"
-                                        "-name" "root"
+                                       "-format" "armor"
+                                       "-name" "root"
                                        "-i" #$host-ssh-key "-private-key")))
                              ((id-status key-id)
                               (let ((id
@@ -122,15 +124,20 @@
 
          (if (zero? age-key-derivation-status)
              (if (age-key-exists? age-key)
-                 (format #t "Derived age key already exists at ~a.~%"
-                         age-key-file)
+                 (format
+                  (current-error-port) "Derived age key already exists at ~a.~%"
+                  age-key-file)
                  (age-store age-key))
              (let-values (((gpg-key-derivation-status gpg-key gpg-key-id)
                            (generate-gpg-key)))
                (if (zero? gpg-key-derivation-status)
                    (if (gpg-key-exists? gpg-key-id)
-                       (format #t "Derived GnuPG key already exists at ~a.~%"
-                               gnupg-home)
+                       (format
+                        (current-error-port)
+                        "Derived GnuPG key already exists at ~a.~%"
+                        gnupg-home)
                        (gpg-import gpg-key))
-                   (format #t "No SOPS compatible key could be generated from ~a.~%"
-                           #$host-ssh-key))))))))
+                   (format
+                    (current-error-port)
+                    "No SOPS compatible key could be generated from ~a.~%"
+                    #$host-ssh-key))))))))

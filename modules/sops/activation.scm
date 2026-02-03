@@ -56,7 +56,8 @@
           (setenv "SOPS_GPG_EXEC" #$gpg-command)
           (when #$verbose?
             (for-each (lambda (var)
-                        (format #t "~a: ~a~%" var (getenv var)))
+                        (format
+                         (current-error-port) "~a: ~a~%" var (getenv var)))
                       '("SOPS_AGE_KEY_FILE"
                         "GNUPGHOME"
                         "SOPS_GPG_EXEC")))
@@ -68,11 +69,16 @@
                                                gpg-command
                                                #:host-ssh-key host-ssh-key
                                                #:verbose? verbose?))
-                  (format #t "'~a' does not exist so no host key can be generated...~%"
-                          #$host-ssh-key))
-              (format #t "no host key will be generated...~%"))
+                  (format
+                   (current-error-port)
+                   "'~a' does not exist so no host key can be generated...~%"
+                   #$host-ssh-key))
+              (format
+               (current-error-port) "no host key will be generated...~%"))
 
-          (format #t "setting up secrets in '~a'...~%" secrets-directory)
+          (format
+           (current-error-port)
+           "setting up secrets in '~a'...~%" secrets-directory)
           (unless (file-exists? secrets-directory)
             (mkdir-p secrets-directory))
 
