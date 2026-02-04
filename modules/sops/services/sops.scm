@@ -11,6 +11,7 @@
   #:use-module (guix gexp)
   #:use-module (guix i18n)
   #:use-module (guix packages)
+  #:use-module (guix records)
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages golang)
   #:use-module (gnu packages golang-crypto)
@@ -18,9 +19,12 @@
   #:use-module (sops services configuration)
   #:use-module (sops activation)
   #:use-module (sops secrets)
+  #:use-module (sops state)
   #:use-module (sops validation)
   #:use-module (srfi srfi-1)
   #:export (sops-secrets-service-type
+
+            sops-secrets-shepherd-service
 
             %default-sops-secrets-directory
             sops-secret->secret-file
@@ -120,53 +124,56 @@ identities where SOPS should look for when decrypting a secret.")
    (list-of-sops-secrets '())
    "The @code{sops-secret} records managed by the @code{sops-secrets-service-type}."))
 
-(define (sops-secrets-shepherd-service config)
+(define (sops-service-configuration->sops-runtime-state config)
+  (match-record config <sops-service-configuration>
+                (gnupg sops generate-key? host-ssh-key gnupg-home age-key-file
+                 secrets-directory verbose? secrets)
+    (sops-runtime-state
+     (age-key-file age-key-file)
+     (gnupg-home gnupg-home)
+     (secrets secrets)
+     (sops sops)
+     (gpg-command gnupg)
+     (host-ssh-key host-ssh-key)
+     (secrets-directory secrets-directory)
+     (generate-key? generate-key?)
+     (verbose? verbose?))))
+
+(define* (sops-secrets-shepherd-service runtime-state
+                                        #:key (sops-provision '(sops-secrets))
+                                        sops-requirement)
+  (define secrets-directory
+    (sops-runtime-state-secrets-directory runtime-state))
+  (define requirement
+    (or sops-requirement
+        `(user-processes
+          ,(string->symbol
+            (string-append "file-system-" secrets-directory)))))
+  (shepherd-service (provision sops-provision)
+                    (requirement requirement)
+                    (one-shot? #t)
+                    (documentation
+                     "SOPS secrets decrypting service.")
+                    (start
+                     #~(make-forkexec-constructor
+                        (list
+                         #$(program-file "sops-secrets-entrypoint"
+                                         (activate-secrets runtime-state)))))
+                    (stop
+                     #~(make-kill-destructor))))
+
+(define (sops-secrets-shepherd-services config)
   (when config
-    (let* ((config-file
-            (sops-service-configuration-config config))
-           (generate-key?
-            (sops-service-configuration-generate-key? config))
-           (host-ssh-key
-            (sops-service-configuration-host-ssh-key config))
-           (age-key-file
-            (sops-service-configuration-age-key-file config))
-           (gnupg-home
-            (sops-service-configuration-gnupg-home config))
-           (secrets (sops-service-configuration-secrets config))
-           (secrets-directory
-            (sops-service-configuration-secrets-directory config))
-           (verbose?
-            (sops-service-configuration-verbose? config))
-           (gnupg (sops-service-configuration-gnupg config))
-           (sops (sops-service-configuration-sops config)))
+    (let ((config-file
+           (sops-service-configuration-config config)))
       (when (maybe-value-set? config-file)
         (warning
          (G_
           "the 'config' field of 'sops-service-configuration' is\
  deprecated, you can delete it from your configuration.~%")))
       (list
-       (shepherd-service (provision '(sops-secrets))
-                         (requirement
-                          `(user-processes
-                            ,(string->symbol
-                              (string-append "file-system-" secrets-directory))))
-                         (one-shot? #t)
-                         (documentation
-                          "SOPS secrets decrypting service.")
-                         (start
-                          #~(make-forkexec-constructor
-                             (list
-                              #$(program-file "sops-secrets-entrypoint"
-                                              (activate-secrets age-key-file
-                                                                gnupg-home
-                                                                secrets
-                                                                sops gnupg
-                                                                #:secrets-directory secrets-directory
-                                                                #:generate-key? generate-key?
-                                                                #:host-ssh-key host-ssh-key
-                                                                #:verbose? verbose?)))))
-                         (stop
-                          #~(make-kill-destructor)))))))
+       (sops-secrets-shepherd-service
+        (sops-service-configuration->sops-runtime-state config))))))
 
 (define (%sops-secrets-file-system config)
   (list
@@ -193,7 +200,7 @@ identities where SOPS should look for when decrypting a secret.")
                                   (service-extension file-system-service-type
                                                      %sops-secrets-file-system)
                                   (service-extension shepherd-root-service-type
-                                                     sops-secrets-shepherd-service)))
+                                                     sops-secrets-shepherd-services)))
                 (compose concatenate)
                 (extend secrets->sops-service-configuration)
                 (description

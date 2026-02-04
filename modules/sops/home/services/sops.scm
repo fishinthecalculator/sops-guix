@@ -9,13 +9,16 @@
   #:use-module (guix gexp)
   #:use-module (guix i18n)
   #:use-module (guix packages)
+  #:use-module (guix records)
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages golang)
   #:use-module (gnu packages golang-crypto)
   #:use-module (sops services configuration)
+  #:use-module (sops services sops)
   #:use-module (sops packages sops)
   #:use-module (sops activation)
   #:use-module (sops secrets)
+  #:use-module (sops state)
   #:use-module (sops validation)
   #:use-module (srfi srfi-1)
   #:export (home-sops-secrets-service-type
@@ -92,42 +95,33 @@ SOPS secrets."))
       #~(string-append (getenv "HOME")
                        "/.gnupg")))
 
-(define (home-sops-secrets-shepherd-service config)
+(define (home-sops-service-configuration->sops-runtime-state config)
+  (match-record config <home-sops-service-configuration>
+                (gnupg sops gnupg-home age-key-file verbose? secrets)
+    (sops-runtime-state
+     (age-key-file age-key-file)
+     (gnupg-home gnupg-home)
+     (secrets secrets)
+     (sops sops)
+     (gpg-command gnupg)
+     (verbose? verbose?))))
+
+(define (home-sops-secrets-shepherd-services config)
   (when config
-    (let* ((config-file
-            (home-sops-service-configuration-config config))
-           (age-key-file
-            (home-sops-service-age-key-file config))
-           (gnupg-home
-            (home-sops-service-gnupg-home config))
-           (shepherd-req (home-sops-service-configuration-shepherd-requirement config))
-           (secrets (home-sops-service-configuration-secrets config))
-           (gnupg (home-sops-service-configuration-gnupg config))
-           (sops (home-sops-service-configuration-sops config))
-           (verbose? (home-sops-service-configuration-sops config)))
+    (let ((config-file
+           (home-sops-service-configuration-config config))
+          (requirement
+           (home-sops-service-configuration-shepherd-requirement config)))
       (when (maybe-value-set? config-file)
         (warning
          (G_
           "the 'config' field of 'home-sops-service-configuration' is\
  deprecated, you can delete it from your configuration.~%")))
       (list
-       (shepherd-service (provision '(home-sops-secrets))
-                         (requirement shepherd-req)
-                         (one-shot? #t)
-                         (documentation
-                          "SOPS secrets decrypting home service.")
-                         (start
-                          #~(make-forkexec-constructor
-                             (list
-                              #$(program-file "home-sops-secrets-entrypoint"
-                                              (activate-secrets age-key-file
-                                                                gnupg-home
-                                                                secrets
-                                                                sops gnupg
-                                                                #:verbose?
-                                                                verbose?)))))
-                         (stop
-                          #~(make-kill-destructor)))))))
+       (sops-secrets-shepherd-service
+        (home-sops-service-configuration->sops-runtime-state config)
+        #:sops-provision '(home-sops-secrets)
+        #:sops-requirement requirement)))))
 
 (define (secrets->home-sops-service-configuration config secrets)
   (home-sops-service-configuration
@@ -143,7 +137,7 @@ SOPS secrets."))
                                                      (lambda (config)
                                                        (list (home-sops-service-configuration-sops config))))
                                   (service-extension home-shepherd-service-type
-                                                     home-sops-secrets-shepherd-service)))
+                                                     home-sops-secrets-shepherd-services)))
                 (compose concatenate)
                 (extend secrets->home-sops-service-configuration)
                 (description
