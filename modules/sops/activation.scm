@@ -67,8 +67,6 @@
           ;; Cleanup old secrets.
           (sops-secrets-cleanup secrets-directory extra-links-directory)
 
-          ;; Create SOPS access rules.
-          (chdir secrets-directory)
           (symlink #$config-file (string-append secrets-directory "/.sops.yaml"))
 
           ;; Create new secrets.
