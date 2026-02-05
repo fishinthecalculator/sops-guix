@@ -1,5 +1,5 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-;;; Copyright © 2023-2025 Giacomo Leidi <therewasa@fishinthecalculator.me>
+;;; Copyright © 2023-2026 Giacomo Leidi <therewasa@fishinthecalculator.me>
 
 (define-module (sops services sops)
   #:use-module (gnu)
@@ -10,6 +10,7 @@
   #:use-module (guix diagnostics)
   #:use-module (guix gexp)
   #:use-module (guix i18n)
+  #:use-module (guix modules)
   #:use-module (guix packages)
   #:use-module (guix records)
   #:use-module (gnu packages gnupg)
@@ -19,6 +20,7 @@
   #:use-module (sops services configuration)
   #:use-module (sops activation)
   #:use-module (sops secrets)
+  #:use-module (sops self)
   #:use-module (sops state)
   #:use-module (sops validation)
   #:use-module (srfi srfi-1)
@@ -204,6 +206,22 @@ identities where SOPS should look for when decrypting a secret.")
      (sops-service-configuration-secrets config)
      secrets))))
 
+(define (sops-secrets-activation config)
+  (define secrets-directory
+    (sops-service-configuration-secrets-directory config))
+  (with-imported-modules (source-module-closure
+                            '((sops build activation))
+                            #:select? sops-module-name?)
+    #~(begin
+        (use-modules (guix build utils)
+                     (sops build activation))
+
+        (define-values (secrets-directory extra-links-directory)
+          (sops-secrets-directories #$secrets-directory))
+
+        (unless (file-exists? secrets-directory)
+          (mkdir-p secrets-directory)))))
+
 (define sops-secrets-service-type
   (service-type (name 'sops-secrets)
                 (extensions (list (service-extension profile-service-type
@@ -211,6 +229,8 @@ identities where SOPS should look for when decrypting a secret.")
                                                        (list (sops-service-configuration-sops config))))
                                   (service-extension file-system-service-type
                                                      %sops-secrets-file-system)
+                                  (service-extension activation-service-type
+                                                     sops-secrets-activation)
                                   (service-extension shepherd-root-service-type
                                                      sops-secrets-shepherd-services)))
                 (compose concatenate)

@@ -131,11 +131,27 @@ SOPS secrets."))
      (home-sops-service-configuration-secrets config)
      secrets))))
 
+(define (home-sops-secrets-activation config)
+  (with-imported-modules (source-module-closure
+                            '((sops build activation))
+                            #:select? sops-module-name?)
+    #~(begin
+        (use-modules (guix build utils)
+                     (sops build activation))
+
+        (define-values (secrets-directory extra-links-directory)
+          (sops-secrets-directories))
+
+        (unless (file-exists? secrets-directory)
+          (mkdir-p secrets-directory)))))
+
 (define home-sops-secrets-service-type
   (service-type (name 'home-sops-secrets)
                 (extensions (list (service-extension home-profile-service-type
                                                      (lambda (config)
                                                        (list (home-sops-service-configuration-sops config))))
+                                  (service-extension home-activation-service-type
+                                                     home-sops-secrets-activation)
                                   (service-extension home-shepherd-service-type
                                                      home-sops-secrets-shepherd-services)))
                 (compose concatenate)
