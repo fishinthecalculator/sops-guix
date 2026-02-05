@@ -11,8 +11,7 @@
   #:use-module (sops self)
   #:export (activate-secrets))
 
-(define* (activate-secrets config-file
-                           age-key-file
+(define* (activate-secrets age-key-file
                            gnupg-home
                            sops-secrets
                            sops-package
@@ -66,8 +65,6 @@
 
           ;; Cleanup old secrets.
           (sops-secrets-cleanup secrets-directory extra-links-directory)
-
-          (symlink #$config-file (string-append secrets-directory "/.sops.yaml"))
 
           ;; Create new secrets.
           (sops-secrets-create

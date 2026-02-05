@@ -150,8 +150,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
           (test-runner-current (system-test-runner #$output))
           (test-begin "sops")
 
-          (test-assert "service has run"
-            (wait-for-file "/run/secrets/.sops.yaml" marionette))
+          (sleep 5)
 
           (test-equal "GPG key has been generated"
             "0C59A513D163688D280F9AFA5EB8AAF08C879499\n"
@@ -231,8 +230,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
           (test-runner-current (system-test-runner #$output))
           (test-begin "sops-age")
 
-          (test-assert "service has run"
-            (wait-for-file "/run/secrets/.sops.yaml" marionette))
+          (sleep 5)
 
           (test-equal "age key has been generated"
             "age16mhhz8lsra7h0z60h89xwhsdhphxqgr88hqu0hky4kt67qpp0vrs0xp556\n"

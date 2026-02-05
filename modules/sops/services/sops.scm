@@ -7,7 +7,9 @@
   #:use-module (gnu services base)
   #:use-module (gnu services configuration)
   #:use-module (gnu services shepherd)
+  #:use-module (guix diagnostics)
   #:use-module (guix gexp)
+  #:use-module (guix i18n)
   #:use-module (guix packages)
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages golang)
@@ -74,6 +76,8 @@ are:
 @item @code{'age}
 @end itemize")))
 
+(define-maybe/no-serialization gexp-or-file-like)
+
 (define-configuration/no-serialization sops-service-configuration
   (gnupg
    (gexp-or-string (file-append gnupg "/bin/gpg"))
@@ -82,8 +86,9 @@ are:
    (package sops)
    "The @code{SOPS} package used to perform decryption.")
   (config
-   (gexp-or-file-like)
-   "A gexp or file-like object evaluating to the SOPS config file.")
+   (maybe-gexp-or-file-like)
+   "A gexp or file-like object evaluating to the SOPS config file.  This field
+is deprecated and will be removed in the future.")
   (generate-key?
    (boolean #f)
    "When true, a SOPS supported key will be derived from the host SSH private
@@ -134,6 +139,11 @@ identities where SOPS should look for when decrypting a secret.")
             (sops-service-configuration-verbose? config))
            (gnupg (sops-service-configuration-gnupg config))
            (sops (sops-service-configuration-sops config)))
+      (when (maybe-value-set? config-file)
+        (warning
+         (G_
+          "the 'config' field of 'sops-service-configuration' is\
+ deprecated, you can delete it from your configuration.~%")))
       (list
        (shepherd-service (provision '(sops-secrets))
                          (requirement
@@ -147,8 +157,7 @@ identities where SOPS should look for when decrypting a secret.")
                           #~(make-forkexec-constructor
                              (list
                               #$(program-file "sops-secrets-entrypoint"
-                                              (activate-secrets config-file
-                                                                age-key-file
+                                              (activate-secrets age-key-file
                                                                 gnupg-home
                                                                 secrets
                                                                 sops gnupg

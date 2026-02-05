@@ -1,11 +1,13 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-;;; Copyright © 2024, 2025 Giacomo Leidi <therewasa@fishinthecalculator.me>
+;;; Copyright © 2024-2026 Giacomo Leidi <therewasa@fishinthecalculator.me>
 
 (define-module (sops home services sops)
   #:use-module (gnu home services)
   #:use-module (gnu home services shepherd)
   #:use-module (gnu services configuration)
+  #:use-module (guix diagnostics)
   #:use-module (guix gexp)
+  #:use-module (guix i18n)
   #:use-module (guix packages)
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages golang)
@@ -37,6 +39,7 @@
   (list-of symbol?))
 
 (define-maybe/no-serialization string)
+(define-maybe/no-serialization gexp-or-file-like)
 
 (define-configuration/no-serialization home-sops-service-configuration
   (gnupg
@@ -47,8 +50,9 @@
    (package sops)
    "The @code{SOPS} package used to perform decryption.")
   (config
-   (gexp-or-file-like)
-   "A gexp or file-like object evaluating to the SOPS config file.")
+   (maybe-gexp-or-file-like)
+   "A gexp or file-like object evaluating to the SOPS config file.  This field
+is deprecated and will be removed in the future.")
   (gnupg-home
    (maybe-string)
    "The homedir of GnuPG, i.e. where keys used to decrypt SOPS secrets will be
@@ -101,6 +105,11 @@ SOPS secrets."))
            (gnupg (home-sops-service-configuration-gnupg config))
            (sops (home-sops-service-configuration-sops config))
            (verbose? (home-sops-service-configuration-sops config)))
+      (when (maybe-value-set? config-file)
+        (warning
+         (G_
+          "the 'config' field of 'home-sops-service-configuration' is\
+ deprecated, you can delete it from your configuration.~%")))
       (list
        (shepherd-service (provision '(home-sops-secrets))
                          (requirement shepherd-req)
@@ -111,8 +120,7 @@ SOPS secrets."))
                           #~(make-forkexec-constructor
                              (list
                               #$(program-file "home-sops-secrets-entrypoint"
-                                              (activate-secrets config-file
-                                                                age-key-file
+                                              (activate-secrets age-key-file
                                                                 gnupg-home
                                                                 secrets
                                                                 sops gnupg
