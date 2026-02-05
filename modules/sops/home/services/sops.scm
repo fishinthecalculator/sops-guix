@@ -51,21 +51,26 @@
    "A gexp or file-like object evaluating to the SOPS config file.")
   (gnupg-home
    (maybe-string)
-   "The homedir of GnuPG, i.e. where keys used to decrypt SOPS secrets will be looked for.
+   "The homedir of GnuPG, i.e. where keys used to decrypt SOPS secrets will be
+looked for.
 It defaults to @code{~/.gnupg}")
   (age-key-file
    (maybe-string)
-   "The file containing the corresponding @code{age} identities where SOPS will look for
-when decrypting a secret.  It defaults to @code{~/.config/sops/age/keys.txt}")
+   "The file containing the corresponding @code{age} identities where SOPS will
+look for when decrypting a secret.  It defaults to
+@code{~/.config/sops/age/keys.txt}")
   (verbose?
    (boolean #f)
-   "When true the service will print extensive information about its execution state.")
+   "When true the service will print extensive information about its execution
+state.")
   (secrets
    (list-of-sops-secrets '())
-   "The @code{sops-secret} records managed by the @code{home-sops-secrets-service-type}.")
+   "The @code{sops-secret} records managed by the
+@code{home-sops-secrets-service-type}.")
   (shepherd-requirement
    (list-of-symbols '())
-   "List of Home shepherd services that must be started before decrypting SOPS secrets."))
+   "List of Home shepherd services that must be started before decrypting
+SOPS secrets."))
 
 (define (home-sops-service-age-key-file config)
   (define age-key-file
