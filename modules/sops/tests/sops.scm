@@ -121,6 +121,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
             (sops-service-configuration
              (config sops.yaml)
              (generate-key? #t)
+             (verbose? #t)
              (secrets
               (list
                restic-secret))))))
@@ -200,6 +201,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
             (sops-service-configuration
              (config sops.yaml)
              (generate-key? #t)
+             (verbose? #t)
              (host-ssh-key "/etc/ssh/ssh_host_ed25519_key")
              (secrets
               (list
