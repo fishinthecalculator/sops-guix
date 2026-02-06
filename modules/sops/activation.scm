@@ -18,7 +18,7 @@
 service."
   (match-record runtime-state <sops-runtime-state>
                 (age-key-file gnupg-home gpg-command host-ssh-key
-                 generate-key? verbose?)
+                 generate-key? secrets-directory verbose?)
     (with-imported-modules (source-module-closure
                             '((sops build activation))
                             #:select? sops-module-name?)
@@ -26,13 +26,26 @@ service."
             (use-modules (guix build utils)
                          (sops build activation))
 
+            (define-values (secrets-directory extra-links-directory)
+              (sops-secrets-directories #$secrets-directory))
+            (define trigger-file
+              (imported-key-trigger-file secrets-directory))
+
             (if #$generate-key?
                 (if (file-exists? #$host-ssh-key)
-                    (invoke #$(generate-host-key age-key-file
-                                                 gnupg-home
-                                                 gpg-command
-                                                 #:host-ssh-key host-ssh-key
-                                                 #:verbose? verbose?))
+                    (begin
+                      (when (file-exists? trigger-file)
+                        (delete-file trigger-file))
+                      (invoke #$(generate-host-key age-key-file
+                                                   gnupg-home
+                                                   gpg-command
+                                                   #:host-ssh-key host-ssh-key
+                                                   #:verbose? verbose?))
+                      (mkdir-p (dirname trigger-file))
+                      (call-with-output-file trigger-file
+                        (lambda (port)
+                          (chmod port #o600)
+                          (display "1" port))))
                     (format
                      (current-error-port)
                      "'~a' does not exist so no host key can be generated...~%"
@@ -44,18 +57,20 @@ service."
   "Return an activation gexp for provided secrets."
   (match-record runtime-state <sops-runtime-state>
                 (age-key-file gnupg-home secrets sops gpg-command
-                 secrets-directory verbose?)
+                 generate-key? secrets-directory verbose?)
     (let ((sops-secrets
            (map lower-sops-secret secrets))
           (sops-command
            (file-append sops "/bin/sops")))
 
       (with-imported-modules (source-module-closure
-                              '((sops build activation))
+                              '((sops build activation)
+                                (sops build utils))
                               #:select? sops-module-name?)
         #~(begin
             (use-modules (guix build utils)
-                         (sops build activation))
+                         (sops build activation)
+                         (sops build utils))
 
             (define-values (secrets-directory extra-links-directory)
               (sops-secrets-directories #$secrets-directory))
@@ -66,6 +81,9 @@ service."
             (format
              (current-error-port)
              "Setting up secrets in '~a'...~%" secrets-directory)
+
+            (when #$generate-key?
+              (wait-for-file (imported-key-trigger-file secrets-directory)))
 
             ;; Cleanup old secrets.
             (sops-secrets-cleanup secrets-directory extra-links-directory)

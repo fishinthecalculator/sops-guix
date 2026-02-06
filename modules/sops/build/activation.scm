@@ -11,7 +11,11 @@
   #:export (sops-secrets-directories
             sops-secrets-setenv
             sops-secrets-cleanup
-            sops-secrets-create))
+            sops-secrets-create
+            imported-key-trigger-file))
+
+(define (imported-key-trigger-file secrets-directory)
+  (string-append secrets-directory "/.sops-guix/imported"))
 
 (define* (sops-secrets-directories #:optional maybe-secrets-directory)
   (define secrets-directory
