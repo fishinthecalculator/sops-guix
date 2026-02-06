@@ -154,9 +154,12 @@ identities where SOPS should look for when decrypting a secret.")
     (sops-runtime-state-log-directory runtime-state))
   (define secrets-directory
     (sops-runtime-state-secrets-directory runtime-state))
+  (define generate-key?
+    (sops-runtime-state-generate-key? runtime-state))
   (define requirement
     (or sops-requirement
         `(user-processes
+          ,@(if generate-key? '(sops-secrets-host-key) '())
           ,(string->symbol
             (string-append "file-system-" secrets-directory)))))
   (shepherd-service (provision sops-provision)
@@ -176,18 +179,46 @@ identities where SOPS should look for when decrypting a secret.")
                     (stop
                      #~(make-kill-destructor))))
 
+(define (sops-secrets-host-key-shepherd-service runtime-state)
+  (define log-directory
+    (sops-runtime-state-log-directory runtime-state))
+  (define secrets-directory
+    (sops-runtime-state-secrets-directory runtime-state))
+  (shepherd-service (provision '(sops-secrets-host-key))
+                    (requirement '(user-processes))
+                    (one-shot? #t)
+                    (documentation
+                     "Generate host key for the SOPS service to use.")
+                    (start
+                     #~(make-forkexec-constructor
+                        (list
+                         #$(program-file "sops-secrets-generate-key"
+                                         (generate-ssh-key runtime-state)))
+                        #$@(if log-directory
+                               (list #:log-file (string-append log-directory
+                                                               "/sops-secrets-host-key.log"))
+                               '())))
+                    (stop
+                     #~(make-kill-destructor))))
+
 (define (sops-secrets-shepherd-services config)
   (when config
     (let ((config-file
+           (sops-service-configuration-config config))
+          (runtime-state
+           (sops-service-configuration->sops-runtime-state config))
+          (generate-key?
            (sops-service-configuration-config config)))
       (when (maybe-value-set? config-file)
         (warning
          (G_
           "the 'config' field of 'sops-service-configuration' is\
  deprecated, you can delete it from your configuration.~%")))
-      (list
-       (sops-secrets-shepherd-service
-        (sops-service-configuration->sops-runtime-state config))))))
+      (append
+       (list (sops-secrets-shepherd-service runtime-state))
+       (if generate-key?
+           (list (sops-secrets-host-key-shepherd-service runtime-state))
+           '())))))
 
 (define (%sops-secrets-file-system config)
   (list
@@ -236,6 +267,5 @@ identities where SOPS should look for when decrypting a secret.")
                 (compose concatenate)
                 (extend secrets->sops-service-configuration)
                 (description
-                 "This service runs at system activation, its duty is to
-decrypt @code{SOPS} secrets and place them at their place with the right
-permissions.")))
+                 "This service decrypts @code{SOPS} secrets and places them at
+their place with the right permissions.")))

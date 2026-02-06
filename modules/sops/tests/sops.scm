@@ -184,6 +184,9 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
           (test-assert "sops-secrets.log created"
             (wait-for-file "/var/log/sops-secrets.log" marionette))
 
+          (test-assert "sops-secrets-host-key.log created"
+            (wait-for-file "/var/log/sops-secrets-host-key.log" marionette))
+
           (test-end))))
 
   (gexp->derivation "sops-test" test))
@@ -267,6 +270,9 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
 
           (test-assert "sops-secrets.log created"
             (wait-for-file "/var/log/sops-secrets.log" marionette))
+
+          (test-assert "sops-secrets-host-key.log created"
+            (wait-for-file "/var/log/sops-secrets-host-key.log" marionette))
 
           (test-end))))
 

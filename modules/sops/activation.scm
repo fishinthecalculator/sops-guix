@@ -10,33 +10,21 @@
   #:use-module (sops secrets)
   #:use-module (sops self)
   #:use-module (sops state)
-  #:export (activate-secrets))
+  #:export (activate-secrets
+            generate-ssh-key))
 
-(define (activate-secrets runtime-state)
-  "Return an activation gexp for provided secrets."
+(define (generate-ssh-key runtime-state)
+  "Return an activation gexp for generating the host key used by the SOPS
+service."
   (match-record runtime-state <sops-runtime-state>
-                (age-key-file gnupg-home secrets sops gpg-command host-ssh-key
-                 secrets-directory generate-key? verbose?)
-    (let ((sops-secrets
-           (map lower-sops-secret secrets))
-          (sops-command
-           (file-append sops "/bin/sops")))
-
-      (with-imported-modules (source-module-closure
-                              '((sops build activation))
-                              #:select? sops-module-name?)
+                (age-key-file gnupg-home gpg-command host-ssh-key
+                 generate-key? verbose?)
+    (with-imported-modules (source-module-closure
+                            '((sops build activation))
+                            #:select? sops-module-name?)
         #~(begin
             (use-modules (guix build utils)
                          (sops build activation))
-
-            (define age-key-file #$age-key-file)
-            (define gnupg-home #$gnupg-home)
-
-            (define-values (secrets-directory extra-links-directory)
-              (sops-secrets-directories #$secrets-directory))
-
-            (sops-secrets-setenv age-key-file gnupg-home #$gpg-command
-                                 #:verbose? #$verbose?)
 
             (if #$generate-key?
                 (if (file-exists? #$host-ssh-key)
@@ -50,7 +38,30 @@
                      "'~a' does not exist so no host key can be generated...~%"
                      #$host-ssh-key))
                 (format
-                 (current-error-port) "no host key will be generated...~%"))
+                 (current-error-port) "no host key will be generated...~%"))))))
+
+(define (activate-secrets runtime-state)
+  "Return an activation gexp for provided secrets."
+  (match-record runtime-state <sops-runtime-state>
+                (age-key-file gnupg-home secrets sops gpg-command
+                 secrets-directory verbose?)
+    (let ((sops-secrets
+           (map lower-sops-secret secrets))
+          (sops-command
+           (file-append sops "/bin/sops")))
+
+      (with-imported-modules (source-module-closure
+                              '((sops build activation))
+                              #:select? sops-module-name?)
+        #~(begin
+            (use-modules (guix build utils)
+                         (sops build activation))
+
+            (define-values (secrets-directory extra-links-directory)
+              (sops-secrets-directories #$secrets-directory))
+
+            (sops-secrets-setenv #$age-key-file #$gnupg-home #$gpg-command
+                                 #:verbose? #$verbose?)
 
             (format
              (current-error-port)
