@@ -124,8 +124,10 @@ and can be symlinked to EXTRA-LINKS-DIRECTORY, depending on user configuration."
                 (current-error-port)
                 "Changing owner of ~a to ~a:~a~%" file uid gid))
              (chown file uid gid))
-           (find-files (first (string-split derived-name #\/))
-                       #:directories? #t)))
+           (find-files
+            (string-append
+             secrets-directory "/" (first (string-split derived-name #\/)))
+            #:directories? #t)))
         ;; Permissions are supported regardless
         (chmod output permissions)
         (when verbose?
