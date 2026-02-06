@@ -122,6 +122,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
              (config sops.yaml)
              (generate-key? #t)
              (verbose? #t)
+             (log-directory "/var/log")
              (secrets
               (list
                restic-secret))))))
@@ -180,6 +181,9 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
                 (call-with-input-file "/run/secrets/restic" get-string-all))
              marionette))
 
+          (test-assert "sops-secrets.log created"
+            (wait-for-file "/var/log/sops-secrets.log" marionette))
+
           (test-end))))
 
   (gexp->derivation "sops-test" test))
@@ -202,6 +206,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
              (generate-key? #t)
              (verbose? #t)
              (host-ssh-key "/etc/ssh/ssh_host_ed25519_key")
+             (log-directory "/var/log")
              (secrets
               (list
                restic-secret))))))
@@ -259,6 +264,9 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
                 (use-modules (ice-9 textual-ports))
                 (call-with-input-file "/run/secrets/restic" get-string-all))
              marionette))
+
+          (test-assert "sops-secrets.log created"
+            (wait-for-file "/var/log/sops-secrets.log" marionette))
 
           (test-end))))
 

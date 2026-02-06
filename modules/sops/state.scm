@@ -12,6 +12,7 @@
             sops-runtime-state-sops
             sops-runtime-state-gpg-command
             sops-runtime-state-host-ssh-key
+            sops-runtime-state-log-directory
             sops-runtime-state-secrets-directory
             sops-runtime-state-generate-key?
             sops-runtime-state-verbose?))
@@ -33,6 +34,8 @@
   (gpg-command              sops-runtime-state-gpg-command)
   (host-ssh-key             sops-runtime-state-host-ssh-key
                             (default "/etc/ssh/ssh_host_rsa_key"))
+  (log-directory            sops-runtime-state-log-directory
+                            (default #f))
   (secrets-directory        sops-runtime-state-secrets-directory
                             (default #f))
   (generate-key?            sops-runtime-state-generate-key?

@@ -41,6 +41,7 @@
             sops-service-configuration-fields
             sops-service-configuration-gnupg
             sops-service-configuration-sops
+            sops-service-configuration-log-directory
             sops-service-configuration-config
             sops-service-configuration-generate-key?
             sops-service-configuration-host-ssh-key
@@ -81,6 +82,7 @@ are:
 @end itemize")))
 
 (define-maybe/no-serialization gexp-or-file-like)
+(define-maybe/no-serialization string)
 
 (define-configuration/no-serialization sops-service-configuration
   (gnupg
@@ -93,6 +95,9 @@ are:
    (maybe-gexp-or-file-like)
    "A gexp or file-like object evaluating to the SOPS config file.  This field
 is deprecated and will be removed in the future.")
+  (log-directory
+   (maybe-string)
+   "The name of a directory where the sops service will create its log files.")
   (generate-key?
    (boolean #f)
    "When true, a SOPS supported key will be derived from the host SSH private
@@ -127,7 +132,7 @@ identities where SOPS should look for when decrypting a secret.")
 (define (sops-service-configuration->sops-runtime-state config)
   (match-record config <sops-service-configuration>
                 (gnupg sops generate-key? host-ssh-key gnupg-home age-key-file
-                 secrets-directory verbose? secrets)
+                 log-directory secrets-directory verbose? secrets)
     (sops-runtime-state
      (age-key-file age-key-file)
      (gnupg-home gnupg-home)
@@ -135,6 +140,7 @@ identities where SOPS should look for when decrypting a secret.")
      (sops sops)
      (gpg-command gnupg)
      (host-ssh-key host-ssh-key)
+     (log-directory (and (maybe-value-set? log-directory) log-directory))
      (secrets-directory secrets-directory)
      (generate-key? generate-key?)
      (verbose? verbose?))))
@@ -142,6 +148,8 @@ identities where SOPS should look for when decrypting a secret.")
 (define* (sops-secrets-shepherd-service runtime-state
                                         #:key (sops-provision '(sops-secrets))
                                         sops-requirement)
+  (define log-directory
+    (sops-runtime-state-log-directory runtime-state))
   (define secrets-directory
     (sops-runtime-state-secrets-directory runtime-state))
   (define requirement
@@ -158,7 +166,11 @@ identities where SOPS should look for when decrypting a secret.")
                      #~(make-forkexec-constructor
                         (list
                          #$(program-file "sops-secrets-entrypoint"
-                                         (activate-secrets runtime-state)))))
+                                         (activate-secrets runtime-state)))
+                        #$@(if log-directory
+                               (list #:log-file (string-append log-directory
+                                                               "/sops-secrets.log"))
+                               '())))
                     (stop
                      #~(make-kill-destructor))))
 
