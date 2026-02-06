@@ -23,6 +23,7 @@
   #:use-module (sops state)
   #:use-module (sops validation)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-26)
   #:export (home-sops-secrets-service-type
 
             home-sops-service-configuration
@@ -112,6 +113,8 @@ SOPS secrets."))
   (when config
     (let ((config-file
            (home-sops-service-configuration-config config))
+          (runtime-state
+           (home-sops-service-configuration->sops-runtime-state config))
           (requirement
            (home-sops-service-configuration-shepherd-requirement config)))
       (when (maybe-value-set? config-file)
@@ -119,11 +122,17 @@ SOPS secrets."))
          (G_
           "the 'config' field of 'home-sops-service-configuration' is\
  deprecated, you can delete it from your configuration.~%")))
-      (list
-       (sops-secrets-shepherd-service
-        (home-sops-service-configuration->sops-runtime-state config)
-        #:sops-provision '(home-sops-secrets)
-        #:sops-requirement requirement)))))
+      (append
+       (map
+        (cut sops-secret-decrypt-shepherd-service <> runtime-state
+             #:home-service? #t #:sops-requirement requirement)
+        (home-sops-service-configuration-secrets config))
+       (list
+        (sops-secrets-shepherd-service
+         runtime-state
+         #:sops-provision '(home-sops-secrets)
+         #:home-service? #t
+         #:sops-requirement requirement))))))
 
 (define (secrets->home-sops-service-configuration config secrets)
   (home-sops-service-configuration
