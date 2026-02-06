@@ -12,6 +12,7 @@
   #:use-module (ice-9 string-fun)
   #:use-module (srfi srfi-1)
   #:export (sanitize-sops-key
+            sops-list-key->sops-string-key
             key->file-name
             sops-secret->file-name
 
@@ -37,7 +38,7 @@
 or if you are really it's a bug in SOPS Guix make sure to report it at https://github.com/fishinthecalculator/sops-guix .")
         value))))
 
-(define (list-key->string-key value)
+(define (sops-list-key->sops-string-key value)
   (apply string-append
          (map (lambda (key)
                 (format #f "[~a]" (if (number? key)
@@ -88,7 +89,7 @@ or if you are really it's a bug in SOPS Guix make sure to report it at https://g
 
 (define (key->file-name key)
   (define string-key
-    (if (string? key) key (list-key->string-key key)))
+    (if (string? key) key (sops-list-key->sops-string-key key)))
   (string-join
    (filter-map
     (lambda (sub-key)
@@ -140,7 +141,7 @@ use the secrets file's extension to determine the output format."
          (output-type
           (sops-secret-output-type secret))
          (path (sops-secret-path secret)))
-    #~'(#$(if (string? key) key (list-key->string-key key))
+    #~'(#$(if (string? key) key (sops-list-key->sops-string-key key))
         #$(sops-secret-file secret)
         #$(sops-secret-user secret)
         #$(sops-secret-group secret)

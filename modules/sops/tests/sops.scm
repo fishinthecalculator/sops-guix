@@ -87,10 +87,6 @@ AAAEDFQJ/AQWZPP1EaqOCwbMFm05NE1RXNeWmKS4RT45E0H/l/BFOVy9uilc2V6xS9Ddox
 hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
 -----END OPENSSH PRIVATE KEY-----")
 
-(define-public sops.yaml
-  (local-file (string-append %channel-root "/.sops.yaml")
-              "sops.yaml"))
-
 (define-public (secrets-file file-name)
   (file-append %secrets-dir "/" file-name))
 
@@ -101,7 +97,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
 ;;
 ;; 2. cd modules/sops/tests/data
 ;;
-;; 3. SOPS_AGE_KEY_FILE="$(pwd)" sops secrets/komputilo.yaml
+;; 3. SOPS_AGE_KEY_FILE="$(pwd)/age-keys.txt" sops secrets/komputilo.yaml
 ;;
 (define-public komputilo.yaml
   (secrets-file "komputilo.yaml"))
@@ -119,7 +115,6 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
                     (specifications->packages '("gawk" "gnupg")))
    (service sops-secrets-service-type
             (sops-service-configuration
-             (config sops.yaml)
              (generate-key? #t)
              (verbose? #t)
              (log-directory "/var/log")
@@ -140,7 +135,8 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
      (memory-size 512)))
 
   (define test
-    (with-imported-modules '((gnu build marionette))
+    (with-imported-modules '((gnu build marionette)
+                             (gnu services herd))
       #~(begin
           (use-modules (srfi srfi-64)
                        (gnu build marionette))
@@ -187,6 +183,9 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
           (test-assert "sops-secrets-host-key.log created"
             (wait-for-file "/var/log/sops-secrets-host-key.log" marionette))
 
+          (test-assert "sops-secret-restic.log created"
+            (wait-for-file "/var/log/sops-secret-restic.log" marionette))
+
           (test-end))))
 
   (gexp->derivation "sops-test" test))
@@ -205,7 +204,6 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
                    (specifications->packages '("age")))
    (service sops-secrets-service-type
             (sops-service-configuration
-             (config sops.yaml)
              (generate-key? #t)
              (verbose? #t)
              (host-ssh-key "/etc/ssh/ssh_host_ed25519_key")
@@ -273,6 +271,9 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
 
           (test-assert "sops-secrets-host-key.log created"
             (wait-for-file "/var/log/sops-secrets-host-key.log" marionette))
+
+          (test-assert "sops-secret-restic.log created"
+            (wait-for-file "/var/log/sops-secret-restic.log" marionette))
 
           (test-end))))
 

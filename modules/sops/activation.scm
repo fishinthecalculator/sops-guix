@@ -10,8 +10,10 @@
   #:use-module (sops secrets)
   #:use-module (sops self)
   #:use-module (sops state)
-  #:export (activate-secrets
-            generate-ssh-key))
+  #:use-module (srfi srfi-1)
+  #:export (activate-secret
+            generate-ssh-key
+            wait-for-secrets))
 
 (define (generate-ssh-key runtime-state)
   "Return an activation gexp for generating the host key used by the SOPS
@@ -53,15 +55,18 @@ service."
                 (format
                  (current-error-port) "no host key will be generated...~%"))))))
 
-(define (activate-secrets runtime-state)
+(define (activate-secret secret runtime-state)
   "Return an activation gexp for provided secrets."
   (match-record runtime-state <sops-runtime-state>
-                (age-key-file gnupg-home secrets sops gpg-command
+                (age-key-file gnupg-home sops gpg-command
                  generate-key? secrets-directory verbose?)
-    (let ((sops-secrets
-           (map lower-sops-secret secrets))
-          (sops-command
-           (file-append sops "/bin/sops")))
+    (let* ((sops-secret
+            (lower-sops-secret secret))
+           ;; See lower-sops-secret from sops/secrets.scm
+           (secret-file-name #~(eighth #$sops-secret))
+           (secret-link #~(seventh #$sops-secret))
+           (sops-command
+            (file-append sops "/bin/sops")))
 
       (with-imported-modules (source-module-closure
                               '((sops build activation)
@@ -70,7 +75,8 @@ service."
         #~(begin
             (use-modules (guix build utils)
                          (sops build activation)
-                         (sops build utils))
+                         (sops build utils)
+                         (srfi srfi-1))
 
             (define-values (secrets-directory extra-links-directory)
               (sops-secrets-directories #$secrets-directory))
@@ -80,16 +86,48 @@ service."
 
             (format
              (current-error-port)
-             "Setting up secrets in '~a'...~%" secrets-directory)
+             "Setting up secret in '~a'...~%" secrets-directory)
 
             (when #$generate-key?
               (wait-for-file (imported-key-trigger-file secrets-directory)))
 
             ;; Cleanup old secrets.
-            (sops-secrets-cleanup secrets-directory extra-links-directory)
+            (sops-secret-cleanup
+             (string-append secrets-directory "/" #$secret-file-name)
+             #$secret-link
+             extra-links-directory)
 
             ;; Create new secrets.
-            (sops-secrets-create
-             #$sops-command (list #$@sops-secrets)
+            (sops-secret-create
+             #$sops-command #$sops-secret
              secrets-directory extra-links-directory
              #:verbose? #$verbose?))))))
+
+(define (wait-for-secrets runtime-state)
+  "Return a gexp waiting for provided secrets to be created."
+  (match-record runtime-state <sops-runtime-state>
+                (secrets secrets-directory verbose?)
+    (let ((sops-secrets-names
+           (map sops-secret->file-name secrets)))
+
+      (with-imported-modules (source-module-closure
+                              '((sops build activation)
+                                (sops build utils))
+                              #:select? sops-module-name?)
+        #~(begin
+            (use-modules (sops build activation)
+                         (sops build utils))
+
+            (define-values (secrets-directory extra-links-directory)
+              (sops-secrets-directories #$secrets-directory))
+
+            (for-each
+             (lambda (secret)
+               (wait-for-file (string-append secrets-directory "/" secret))
+               (when #$verbose?
+                 (format (current-output-port) "~a successfully created.~%")))
+             (list #$@sops-secrets-names))
+
+            (format
+             (current-error-port)
+             "Secrets correctly setup in '~a'.~%" secrets-directory))))))

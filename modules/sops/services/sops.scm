@@ -24,9 +24,12 @@
   #:use-module (sops state)
   #:use-module (sops validation)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-26)
+  #:use-module (srfi srfi-35)
   #:export (sops-secrets-service-type
 
             sops-secrets-shepherd-service
+            sops-secret-decrypt-shepherd-service
 
             %default-sops-secrets-directory
             sops-secret->secret-file
@@ -83,6 +86,23 @@ are:
 @item @code{'age}
 @end itemize")))
 
+(define (sanitize-secrets secrets)
+  (let loop ((keys '())
+             (acc '())
+             (secrets secrets))
+    (if (null? secrets)
+        acc
+        (let* ((s (car secrets))
+               (key (sops-list-key->sops-string-key (sops-secret-key s))))
+          (if (member key keys)
+              (raise
+               (formatted-message
+                (G_
+                 "sops-secrets' keys are supposed to be unique but '~a' \
+is a duplicate!")
+                key))
+              (loop (cons key keys) (cons s acc) (cdr secrets)))))))
+
 (define-maybe/no-serialization gexp-or-file-like)
 (define-maybe/no-serialization string)
 
@@ -129,7 +149,8 @@ identities where SOPS should look for when decrypting a secret.")
    "When true the service will print extensive information about its execution state.")
   (secrets
    (list-of-sops-secrets '())
-   "The @code{sops-secret} records managed by the @code{sops-secrets-service-type}."))
+   "The @code{sops-secret} records managed by the @code{sops-secrets-service-type}."
+   (sanitizer sanitize-secrets)))
 
 (define (sops-service-configuration->sops-runtime-state config)
   (match-record config <sops-service-configuration>
@@ -147,9 +168,65 @@ identities where SOPS should look for when decrypting a secret.")
      (generate-key? generate-key?)
      (verbose? verbose?))))
 
+(define* (sops-secret->shepherd-service-name secret #:key home-service?)
+  (string->symbol
+   (string-append
+    (if home-service? "home-" "")
+    "sops-secret-"
+    (sops-secret->file-name secret))))
+
+(define (sops-secret->program-entrypoint secret)
+  (define (format key)
+    ;; Remove from KEY characters that cannot be used in the store.
+    (string-map (lambda (chr)
+                  (if (and (char-set-contains? char-set:ascii chr)
+                           (char-set-contains? char-set:graphic chr)
+                           (not (memv chr '(#\. #\/ #\space))))
+                      chr
+                      #\-))
+                key))
+  (define key (sops-secret-key secret))
+  (string-append "sops-secret-"
+                 (if (string? key)
+                     (format key)
+                     (string-join key "-"))))
+
 (define* (sops-secrets-shepherd-service runtime-state
                                         #:key (sops-provision '(sops-secrets))
-                                        sops-requirement)
+                                        (sops-requirement '(user-processes))
+                                        home-service?)
+  (define log-directory
+    (sops-runtime-state-log-directory runtime-state))
+  (define secrets
+    (sops-runtime-state-secrets runtime-state))
+  (define requirement
+    (append sops-requirement
+            (map
+             (lambda (secret)
+               (sops-secret->shepherd-service-name
+                secret #:home-service? home-service?))
+             secrets)))
+  (shepherd-service (provision sops-provision)
+                    (requirement requirement)
+                    (one-shot? #t)
+                    (documentation
+                     "SOPS secrets provisioning service.")
+                    (start
+                     #~(make-forkexec-constructor
+                        (list
+                         #$(program-file "sops-secrets-wait"
+                                         (wait-for-secrets runtime-state)))
+                        #$@(if log-directory
+                               (list
+                                #:log-file (string-append log-directory
+                                                          "/sops-secrets.log"))
+                               '())))
+                    (stop
+                     #~(make-kill-destructor))))
+
+(define* (sops-secret-decrypt-shepherd-service secret runtime-state #:key
+                                               home-service?
+                                               sops-requirement)
   (define log-directory
     (sops-runtime-state-log-directory runtime-state))
   (define secrets-directory
@@ -162,19 +239,26 @@ identities where SOPS should look for when decrypting a secret.")
           ,@(if generate-key? '(sops-secrets-host-key) '())
           ,(string->symbol
             (string-append "file-system-" secrets-directory)))))
-  (shepherd-service (provision sops-provision)
+  (define entrypoint-name
+    (sops-secret->program-entrypoint secret))
+  (shepherd-service (provision
+                     (list
+                      (sops-secret->shepherd-service-name
+                       secret #:home-service? home-service?)))
                     (requirement requirement)
                     (one-shot? #t)
                     (documentation
-                     "SOPS secrets decrypting service.")
+                     "SOPS secret decrypting service.")
                     (start
                      #~(make-forkexec-constructor
                         (list
-                         #$(program-file "sops-secrets-entrypoint"
-                                         (activate-secrets runtime-state)))
+                         #$(program-file
+                            entrypoint-name
+                            (activate-secret secret runtime-state)))
                         #$@(if log-directory
-                               (list #:log-file (string-append log-directory
-                                                               "/sops-secrets.log"))
+                               (list
+                                #:log-file (string-append log-directory
+                                                          "/" entrypoint-name ".log"))
                                '())))
                     (stop
                      #~(make-kill-destructor))))
@@ -208,7 +292,7 @@ identities where SOPS should look for when decrypting a secret.")
           (runtime-state
            (sops-service-configuration->sops-runtime-state config))
           (generate-key?
-           (sops-service-configuration-config config)))
+           (sops-service-configuration-generate-key? config)))
       (when (maybe-value-set? config-file)
         (warning
          (G_
@@ -216,6 +300,9 @@ identities where SOPS should look for when decrypting a secret.")
  deprecated, you can delete it from your configuration.~%")))
       (append
        (list (sops-secrets-shepherd-service runtime-state))
+       (map
+        (cut sops-secret-decrypt-shepherd-service <> runtime-state)
+        (sops-service-configuration-secrets config))
        (if generate-key?
            (list (sops-secrets-host-key-shepherd-service runtime-state))
            '())))))
@@ -229,13 +316,39 @@ identities where SOPS should look for when decrypting a secret.")
      (type "ramfs")
      (check? #f))))
 
-(define (secrets->sops-service-configuration config secrets)
+(define (secrets->sops-service-configuration config extension)
+  (define verbose?
+    (sops-service-configuration-verbose? config))
+  (define config-secrets
+    (sops-service-configuration-secrets config))
+  (define sops-string-key
+    (compose (lambda (k)
+               (if (list? k)
+                   (sops-list-key->sops-string-key k)
+                   k))
+             sops-secret-key))
   (sops-service-configuration
    (inherit config)
    (secrets
-    (append
-     (sops-service-configuration-secrets config)
-     secrets))))
+    (if (zero? (length extension))
+        config-secrets
+        (sanitize-secrets
+         (let loop ((acc config-secrets)
+                    (extension extension))
+           (if (null? extension)
+               acc
+               (loop
+                (if (member (sops-string-key (car extension))
+                            (map sops-string-key acc))
+                    (begin
+                      (format (current-error-port)
+                              "WARNING: Duplicate secrets detected, one will be \
+dropped: there can be only one secret with a given key but at least two were \
+found with key '~a'.~%"
+                              (sops-string-key (car extension)))
+                      acc)
+                    (cons (car extension) acc))
+                (cdr extension)))))))))
 
 (define (sops-secrets-activation config)
   (define secrets-directory
