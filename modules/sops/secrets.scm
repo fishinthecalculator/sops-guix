@@ -1,5 +1,5 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-;;; Copyright © 2024 Giacomo Leidi <therewasa@fishinthecalculator.me>
+;;; Copyright © 2024, 2026 Giacomo Leidi <therewasa@fishinthecalculator.me>
 
 (define-module (sops secrets)
   #:use-module (gnu services configuration)
@@ -37,17 +37,20 @@
 or if you are really it's a bug in SOPS Guix make sure to report it at https://github.com/fishinthecalculator/sops-guix .")
         value))))
 
+(define (list-key->string-key value)
+  (apply string-append
+         (map (lambda (key)
+                (format #f "[~a]" (if (number? key)
+                                      key
+                                      (format #f "\"~a\"" key))))
+              value)))
+
 (define (sanitize-sops-list-key value)
   (if (every (lambda (key) (or string?
                                (and (integer? value)
                                     (>= value 0))))
              value)
-      (apply string-append
-             (map (lambda (key)
-                    (format #f "[~a]" (if (number? key)
-                                          key
-                                          (format #f "\"~a\"" key))))
-                  value))
+      value
       (raise
        (formatted-message
         (G_ "key field value must be a list of strings or positive integers, but ~a was found.~%")
@@ -84,16 +87,18 @@ or if you are really it's a bug in SOPS Guix make sure to report it at https://g
             value)))))
 
 (define (key->file-name key)
+  (define string-key
+    (if (string? key) key (list-key->string-key key)))
   (string-join
    (filter-map
     (lambda (sub-key)
       (and (not (string-null? sub-key))
            (string-replace-substring sub-key "[" "")))
     (string-split
-     (string-replace-substring key "\"" "") #\]))
+     (string-replace-substring string-key "\"" "") #\]))
    "/"))
 
-(define-maybe string)
+(define-maybe/no-serialization string)
 
 (define-configuration/no-serialization sops-secret
   (key
@@ -130,10 +135,12 @@ use the secrets file's extension to determine the output format."
 (define (lower-sops-secret secret)
   (let* ((file-name
           (sops-secret->file-name secret))
+         (key
+          (sops-secret-key secret))
          (output-type
           (sops-secret-output-type secret))
          (path (sops-secret-path secret)))
-    #~'(#$(sops-secret-key secret)
+    #~'(#$(if (string? key) key (list-key->string-key key))
         #$(sops-secret-file secret)
         #$(sops-secret-user secret)
         #$(sops-secret-group secret)
