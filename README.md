@@ -32,9 +32,9 @@ Assuming that the right private keys are also provided, `sops-secret`s can be in
 (define postgresql-secret
   (sops-secret
    (key '("postgresql"))
-   ;; Here you can pass any absolute file name. It can either live
-   ;; outside your Guix code repository in any of your system directories,
-   ;; or inside it and be distributed with your Guix configurations.
+   ;; Here you can pass any absolute file name. It doesn't
+   ;; need to be under version control nor in the
+   ;; same directory as the Guix code.
    (file (local-file "/home/user/.secrets/secrets.yaml"
                      "secrets.yaml"))))
 
