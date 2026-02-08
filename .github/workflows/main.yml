@@ -15,6 +15,7 @@ on:
         - .dir-locals.el
         - .guix-authorizations
         - .guix-channel
+        - doc/**
 
   push:
     # Sequence of patterns matched against refs/tags
@@ -29,6 +30,7 @@ on:
         - .dir-locals.el
         - .guix-authorizations
         - .guix-channel
+        - doc/**
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
