@@ -102,10 +102,21 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
 (define-public komputilo.yaml
   (secrets-file "komputilo.yaml"))
 
+;; TODO: Test extra symlink
 (define-public restic-secret
   (sops-secret
    (key '("restic"))
-   (file komputilo.yaml)))
+   (file komputilo.yaml)
+   (user "alice")
+   (group "users")
+   (permissions #o400)))
+(define-public bonfire-secret
+  (sops-secret
+   (key '("bonfire" "postgresql_password"))
+   (file komputilo.yaml)
+   (user "alice")
+   (group "users")
+   (permissions #o440)))
 
 (define %sops-os
   (simple-operating-system
@@ -120,6 +131,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
              (log-directory "/var/log")
              (secrets
               (list
+               bonfire-secret
                restic-secret))))))
 
 (define (run-sops-test)
@@ -169,12 +181,74 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
 
           (sleep 5)
 
-          (test-equal "secret content is sound"
+          (test-equal "restic secret content is sound"
             "hello world"
             (marionette-eval
              '(begin
                 (use-modules (ice-9 textual-ports))
                 (call-with-input-file "/run/secrets/restic" get-string-all))
+             marionette))
+
+          (test-equal "bonfire secret content is sound"
+            "super-secret"
+            (marionette-eval
+             '(begin
+                (use-modules (ice-9 textual-ports))
+                (call-with-input-file "/run/secrets/bonfire/postgresql_password" get-string-all))
+             marionette))
+
+          (test-equal "restic secret permissions are correct"
+            #o400
+            (marionette-eval
+             '(begin
+                (stat:perms (stat "/run/secrets/restic")))
+             marionette))
+
+          (test-equal "restic user owner is correct"
+            "alice"
+            (marionette-eval
+             '(begin
+                (passwd:name
+                 (getpwuid
+                  (stat:uid
+                   (stat "/run/secrets/restic")))))
+             marionette))
+
+          (test-equal "restic user group is correct"
+            "users"
+            (marionette-eval
+             '(begin
+                (group:name
+                 (getgrgid
+                  (stat:gid
+                   (stat "/run/secrets/restic")))))
+             marionette))
+
+          (test-equal "bonfire secret permissions are correct"
+            #o440
+            (marionette-eval
+             '(begin
+                (stat:perms (stat "/run/secrets/bonfire/postgresql_password")))
+             marionette))
+
+          (test-equal "bonfire user owner is correct"
+            "alice"
+            (marionette-eval
+             '(begin
+                (passwd:name
+                 (getpwuid
+                  (stat:uid
+                   (stat "/run/secrets/bonfire/postgresql_password")))))
+             marionette))
+
+          (test-equal "bonfire user group is correct"
+            "users"
+            (marionette-eval
+             '(begin
+                (group:name
+                 (getgrgid
+                  (stat:gid
+                   (stat "/run/secrets/bonfire/postgresql_password")))))
              marionette))
 
           (test-assert "sops-secrets.log created"
@@ -210,6 +284,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
              (log-directory "/var/log")
              (secrets
               (list
+               bonfire-secret
                restic-secret))))))
 
 (define (run-age-sops-test)
@@ -258,12 +333,74 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
 
           (sleep 5)
 
-          (test-equal "secret content is sound"
+          (test-equal "restic secret content is sound"
             "hello world"
             (marionette-eval
              '(begin
                 (use-modules (ice-9 textual-ports))
                 (call-with-input-file "/run/secrets/restic" get-string-all))
+             marionette))
+
+          (test-equal "bonfire secret content is sound"
+            "super-secret"
+            (marionette-eval
+             '(begin
+                (use-modules (ice-9 textual-ports))
+                (call-with-input-file "/run/secrets/bonfire/postgresql_password" get-string-all))
+             marionette))
+
+          (test-equal "restic secret permissions are correct"
+            #o400
+            (marionette-eval
+             '(begin
+                (stat:perms (stat "/run/secrets/restic")))
+             marionette))
+
+          (test-equal "restic user owner is correct"
+            "alice"
+            (marionette-eval
+             '(begin
+                (passwd:name
+                 (getpwuid
+                  (stat:uid
+                   (stat "/run/secrets/restic")))))
+             marionette))
+
+          (test-equal "restic user group is correct"
+            "users"
+            (marionette-eval
+             '(begin
+                (group:name
+                 (getgrgid
+                  (stat:gid
+                   (stat "/run/secrets/restic")))))
+             marionette))
+
+          (test-equal "bonfire secret permissions are correct"
+            #o440
+            (marionette-eval
+             '(begin
+                (stat:perms (stat "/run/secrets/bonfire/postgresql_password")))
+             marionette))
+
+          (test-equal "bonfire user owner is correct"
+            "alice"
+            (marionette-eval
+             '(begin
+                (passwd:name
+                 (getpwuid
+                  (stat:uid
+                   (stat "/run/secrets/bonfire/postgresql_password")))))
+             marionette))
+
+          (test-equal "bonfire user group is correct"
+            "users"
+            (marionette-eval
+             '(begin
+                (group:name
+                 (getgrgid
+                  (stat:gid
+                   (stat "/run/secrets/bonfire/postgresql_password")))))
              marionette))
 
           (test-assert "sops-secrets.log created"
