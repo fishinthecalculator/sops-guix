@@ -4,7 +4,7 @@
 
 This project aims at implementing secure provisioning of secrets with Guix and [SOPS](https://getsops.io). It was strongly inspired from NixOS' [sops-nix](https://github.com/Mic92/sops-nix).
 
-It works by putting encrypted secrets in the store and by adding a one-shot Shepherd service that decrypts them at startup in a ramfs/tmpfs filesystem. This means that clear text secrets never hit the disk and that you can (and actually are encouraged to) check in your SOPS secrets in the same version control system you use to track you Guix configurations.
+It works by putting encrypted secrets in the store and by adding a one-shot Shepherd service that decrypts them at startup in a ramfs/tmpfs filesystem. This means that clear text secrets never hit the disk and, if you want, that you can check in your SOPS secrets in the same version control system you use to track you Guix configurations.
 
 ## Secure secret provisioning with Guix
 
