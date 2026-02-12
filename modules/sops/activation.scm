@@ -10,7 +10,6 @@
   #:use-module (sops secrets)
   #:use-module (sops self)
   #:use-module (sops state)
-  #:use-module (srfi srfi-1)
   #:export (activate-secret
             generate-ssh-key
             wait-for-secrets))
@@ -20,7 +19,7 @@
 service."
   (match-record runtime-state <sops-runtime-state>
                 (age-key-file gnupg-home gpg-command host-ssh-key
-                 generate-key? secrets-directory verbose?)
+                 generate-key? verbose?)
     (with-imported-modules (source-module-closure
                             '((sops build activation))
                             #:select? sops-module-name?)
@@ -28,26 +27,13 @@ service."
             (use-modules (guix build utils)
                          (sops build activation))
 
-            (define-values (secrets-directory extra-links-directory)
-              (sops-secrets-directories #$secrets-directory))
-            (define trigger-file
-              (imported-key-trigger-file secrets-directory))
-
             (if #$generate-key?
                 (if (file-exists? #$host-ssh-key)
-                    (begin
-                      (when (file-exists? trigger-file)
-                        (delete-file trigger-file))
-                      (invoke #$(generate-host-key age-key-file
-                                                   gnupg-home
-                                                   gpg-command
-                                                   #:host-ssh-key host-ssh-key
-                                                   #:verbose? verbose?))
-                      (mkdir-p (dirname trigger-file))
-                      (call-with-output-file trigger-file
-                        (lambda (port)
-                          (chmod port #o600)
-                          (display "1" port))))
+                    (invoke #$(generate-host-key age-key-file
+                                                 gnupg-home
+                                                 gpg-command
+                                                 #:host-ssh-key host-ssh-key
+                                                 #:verbose? verbose?))
                     (format
                      (current-error-port)
                      "'~a' does not exist so no host key can be generated...~%"
@@ -59,7 +45,7 @@ service."
   "Return an activation gexp for provided secrets."
   (match-record runtime-state <sops-runtime-state>
                 (age-key-file gnupg-home sops gpg-command
-                 generate-key? secrets-directory verbose?)
+                 secrets-directory verbose?)
     (let* ((sops-secret
             (lower-sops-secret secret))
            ;; See lower-sops-secret from sops/secrets.scm
@@ -69,13 +55,11 @@ service."
             (file-append sops "/bin/sops")))
 
       (with-imported-modules (source-module-closure
-                              '((sops build activation)
-                                (sops build utils))
+                              '((sops build activation))
                               #:select? sops-module-name?)
         #~(begin
             (use-modules (guix build utils)
                          (sops build activation)
-                         (sops build utils)
                          (srfi srfi-1))
 
             (define-values (secrets-directory extra-links-directory)
@@ -87,9 +71,6 @@ service."
             (format
              (current-error-port)
              "Setting up secret in '~a'...~%" secrets-directory)
-
-            (when #$generate-key?
-              (wait-for-file (imported-key-trigger-file secrets-directory)))
 
             ;; Cleanup old secrets.
             (sops-secret-cleanup
