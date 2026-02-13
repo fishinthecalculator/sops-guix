@@ -106,8 +106,8 @@ SOPS secrets."))
   (match-record config <home-sops-service-configuration>
                 (gnupg sops verbose? secrets)
     (sops-runtime-state
-     (age-key-file (home-sops-service-age-key-file config))
-     (gnupg-home (home-sops-service-gnupg-home config))
+     (age-key-file (home-sops-service-configuration-age-key-file config))
+     (gnupg-home (home-sops-service-configuration-gnupg-home config))
      (secrets secrets)
      (sops sops)
      (gpg-command gnupg)
