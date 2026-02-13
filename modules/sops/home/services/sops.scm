@@ -45,7 +45,12 @@
 (define list-of-sops-symbols?
   (list-of symbol?))
 
+(define (string-or-gexp? value)
+  (or (string? value)
+      (gexp? value)))
+
 (define-maybe/no-serialization string)
+(define-maybe/no-serialization string-or-gexp)
 (define-maybe/no-serialization gexp-or-file-like)
 
 (define (home-sops-service-gnupg-home config)
@@ -73,13 +78,13 @@
    "A gexp or file-like object evaluating to the SOPS config file.  This field
 is deprecated and will be removed in the future.")
   (gnupg-home
-   (maybe-string)
+   (maybe-string-or-gexp)
    "The homedir of GnuPG, i.e. where keys used to decrypt SOPS secrets will be
 looked for.
 It defaults to @code{~/.gnupg}"
    (sanitizer home-sops-service-gnupg-home))
   (age-key-file
-   (maybe-string)
+   (maybe-string-or-gexp)
    "The file containing the corresponding @code{age} identities where SOPS will
 look for when decrypting a secret.  It defaults to
 @code{~/.config/sops/age/keys.txt}"
