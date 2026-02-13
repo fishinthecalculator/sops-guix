@@ -1,5 +1,6 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 ;;; Copyright © 2024-2026 Giacomo Leidi <therewasa@fishinthecalculator.me>
+;;; Copyright © 2026 Hilton Chain <hako@ultrarare.space>
 
 (define-module (sops home services sops)
   #:use-module (gnu home services)
@@ -47,6 +48,18 @@
 (define-maybe/no-serialization string)
 (define-maybe/no-serialization gexp-or-file-like)
 
+(define (home-sops-service-gnupg-home config)
+  (if (maybe-value-set? config)
+      config
+      #~(string-append (getenv "HOME")
+                       "/.gnupg")))
+
+(define (home-sops-service-age-key-file config)
+  (if (maybe-value-set? config)
+      config
+      #~(string-append (getenv "HOME")
+                       "/.config/sops/age/keys.txt")))
+
 (define-configuration/no-serialization home-sops-service-configuration
   (gnupg
    (gexp-or-string (file-append gnupg "/bin/gpg"))
@@ -63,12 +76,14 @@ is deprecated and will be removed in the future.")
    (maybe-string)
    "The homedir of GnuPG, i.e. where keys used to decrypt SOPS secrets will be
 looked for.
-It defaults to @code{~/.gnupg}")
+It defaults to @code{~/.gnupg}"
+   (sanitizer home-sops-service-gnupg-home))
   (age-key-file
    (maybe-string)
    "The file containing the corresponding @code{age} identities where SOPS will
 look for when decrypting a secret.  It defaults to
-@code{~/.config/sops/age/keys.txt}")
+@code{~/.config/sops/age/keys.txt}"
+   (sanitizer home-sops-service-age-key-file))
   (verbose?
    (boolean #f)
    "When true the service will print extensive information about its execution
@@ -81,22 +96,6 @@ state.")
    (list-of-symbols '())
    "List of Home shepherd services that must be started before decrypting
 SOPS secrets."))
-
-(define (home-sops-service-age-key-file config)
-  (define age-key-file
-    (home-sops-service-configuration-age-key-file config))
-  (if (maybe-value-set? age-key-file)
-      age-key-file
-      #~(string-append (getenv "HOME")
-                       "/.config/sops/age/keys.txt")))
-
-(define (home-sops-service-gnupg-home config)
-  (define gnupg-home
-    (home-sops-service-configuration-gnupg-home config))
-  (if (maybe-value-set? gnupg-home)
-      gnupg-home
-      #~(string-append (getenv "HOME")
-                       "/.gnupg")))
 
 (define (home-sops-service-configuration->sops-runtime-state config)
   (match-record config <home-sops-service-configuration>
