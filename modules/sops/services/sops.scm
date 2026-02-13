@@ -176,20 +176,21 @@ identities where SOPS should look for when decrypting a secret.")
     (sops-secret->file-name secret))))
 
 (define (sops-secret->program-entrypoint secret)
-  (define (format key)
+  (define (store-format key)
     ;; Remove from KEY characters that cannot be used in the store.
     (string-map (lambda (chr)
                   (if (and (char-set-contains? char-set:ascii chr)
                            (char-set-contains? char-set:graphic chr)
-                           (not (memv chr '(#\. #\/ #\space))))
+                           (not (memv chr '(#\. #\/ #\space #\@))))
                       chr
                       #\-))
                 key))
   (define key (sops-secret-key secret))
   (string-append "sops-secret-"
-                 (if (string? key)
-                     (format key)
-                     (string-join key "-"))))
+                 (store-format
+                  (if (string? key)
+                      key
+                      (string-join key "-")))))
 
 (define* (sops-secrets-shepherd-service runtime-state
                                         #:key (sops-provision '(sops-secrets))

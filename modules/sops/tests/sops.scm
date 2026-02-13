@@ -11,7 +11,9 @@
   #:use-module (gnu tests)
   #:use-module (guix gexp)
   #:use-module ((guix utils) #:select (current-source-directory))
-  #:export (%test-sops
+  #:export (%sops-os
+            %sops-age-os
+            %test-sops
             %test-sops-age))
 
 
@@ -112,7 +114,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
    (permissions #o400)))
 (define-public bonfire-secret
   (sops-secret
-   (key '("bonfire" "postgresql_password"))
+   (key '("bonfire" "p@stgresql_password"))
    (file komputilo.yaml)
    (user "alice")
    (group "users")
@@ -194,7 +196,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
             (marionette-eval
              '(begin
                 (use-modules (ice-9 textual-ports))
-                (call-with-input-file "/run/secrets/bonfire/postgresql_password" get-string-all))
+                (call-with-input-file "/run/secrets/bonfire/p@stgresql_password" get-string-all))
              marionette))
 
           (test-equal "restic secret permissions are correct"
@@ -228,7 +230,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
             #o440
             (marionette-eval
              '(begin
-                (stat:perms (stat "/run/secrets/bonfire/postgresql_password")))
+                (stat:perms (stat "/run/secrets/bonfire/p@stgresql_password")))
              marionette))
 
           (test-equal "bonfire user owner is correct"
@@ -238,7 +240,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
                 (passwd:name
                  (getpwuid
                   (stat:uid
-                   (stat "/run/secrets/bonfire/postgresql_password")))))
+                   (stat "/run/secrets/bonfire/p@stgresql_password")))))
              marionette))
 
           (test-equal "bonfire user group is correct"
@@ -248,7 +250,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
                 (group:name
                  (getgrgid
                   (stat:gid
-                   (stat "/run/secrets/bonfire/postgresql_password")))))
+                   (stat "/run/secrets/bonfire/p@stgresql_password")))))
              marionette))
 
           (test-assert "sops-secrets.log created"
@@ -259,6 +261,9 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
 
           (test-assert "sops-secret-restic.log created"
             (wait-for-file "/var/log/sops-secret-restic.log" marionette))
+
+          (test-assert "sops-secret-bonfire-p-stgresql_password.log created"
+            (wait-for-file "/var/log/sops-secret-bonfire-p-stgresql_password.log" marionette))
 
           (test-end))))
 
@@ -346,7 +351,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
             (marionette-eval
              '(begin
                 (use-modules (ice-9 textual-ports))
-                (call-with-input-file "/run/secrets/bonfire/postgresql_password" get-string-all))
+                (call-with-input-file "/run/secrets/bonfire/p@stgresql_password" get-string-all))
              marionette))
 
           (test-equal "restic secret permissions are correct"
@@ -380,7 +385,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
             #o440
             (marionette-eval
              '(begin
-                (stat:perms (stat "/run/secrets/bonfire/postgresql_password")))
+                (stat:perms (stat "/run/secrets/bonfire/p@stgresql_password")))
              marionette))
 
           (test-equal "bonfire user owner is correct"
@@ -390,7 +395,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
                 (passwd:name
                  (getpwuid
                   (stat:uid
-                   (stat "/run/secrets/bonfire/postgresql_password")))))
+                   (stat "/run/secrets/bonfire/p@stgresql_password")))))
              marionette))
 
           (test-equal "bonfire user group is correct"
@@ -400,7 +405,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
                 (group:name
                  (getgrgid
                   (stat:gid
-                   (stat "/run/secrets/bonfire/postgresql_password")))))
+                   (stat "/run/secrets/bonfire/p@stgresql_password")))))
              marionette))
 
           (test-assert "sops-secrets.log created"
@@ -411,6 +416,9 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
 
           (test-assert "sops-secret-restic.log created"
             (wait-for-file "/var/log/sops-secret-restic.log" marionette))
+
+          (test-assert "sops-secret-bonfire-p-stgresql_password.log created"
+            (wait-for-file "/var/log/sops-secret-bonfire-p-stgresql_password.log" marionette))
 
           (test-end))))
 
