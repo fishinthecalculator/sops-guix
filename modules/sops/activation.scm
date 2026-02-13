@@ -116,7 +116,8 @@ service."
                               #:select? sops-module-name?)
         #~(begin
             (use-modules (sops build activation)
-                         (sops build utils))
+                         (sops build utils)
+                         (ice-9 format))
 
             (define-values (secrets-directory extra-links-directory)
               (sops-secrets-directories #$secrets-directory))
