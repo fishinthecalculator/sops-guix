@@ -192,31 +192,66 @@ identities where SOPS should look for when decrypting a secret.")
                       key
                       (string-join key "-")))))
 
+;; This reimplements https://codeberg.org/shepherd/shepherd/pulls/109.
+;; Once it is merged it can be dropped.
+(define make-system-constructor
+  #~(lambda* (#:key log-file . command)
+      (use-modules (srfi srfi-1))
+      (define keyword-index
+        (and log-file
+             (list-index (lambda (el) (equal? el #:log-file)) command)))
+      (define (delete-idx l idx)
+        (let loop ((i 0)
+                   (values l)
+                   (acc '()))
+          (if (null? values)
+              (reverse acc)
+              (loop (1+ i)
+                    (cdr values)
+                    (if (member i idx)
+                        acc
+                        (cons (car values) acc))))))
+      (define* (spawn-shell-command command #:key log-file)
+        (spawn-command (list (or (getenv "SHELL") "/bin/sh")
+                             "-c" command)
+                       #:directory (getcwd)
+                       #:log-file log-file))
+      (lambda args
+        (zero? (status:exit-val
+                (spawn-shell-command
+                 (string-concatenate
+                  (if log-file
+                      ;; Drop log-file keyword argument
+                      (delete-idx
+                       command (list keyword-index (1+ keyword-index)))
+                      command))
+                 #:log-file log-file))))))
+
 (define* (sops-secrets-shepherd-service runtime-state
                                         #:key (sops-provision '(sops-secrets))
                                         (sops-requirement '(user-processes))
                                         home-service?)
   (define log-directory
     (sops-runtime-state-log-directory runtime-state))
-  (define secrets
-    (sops-runtime-state-secrets runtime-state))
   (define requirement
     (append sops-requirement
             (map
              (lambda (secret)
                (sops-secret->shepherd-service-name
                 secret #:home-service? home-service?))
-             secrets)))
+             (sops-runtime-state-secrets runtime-state))))
+  (define entrypoint
+    (program-file "sops-secrets-wait"
+                  (wait-for-secrets runtime-state)))
   (shepherd-service (provision sops-provision)
                     (requirement requirement)
                     (one-shot? #t)
                     (documentation
                      "SOPS secrets provisioning service.")
                     (start
-                     #~(make-forkexec-constructor
-                        (list
-                         #$(program-file "sops-secrets-wait"
-                                         (wait-for-secrets runtime-state)))
+                     #~(#$make-system-constructor
+                        (string-join
+                         '("exec" "-a" #$entrypoint #$entrypoint) " ")
                         #$@(if log-directory
                                (list
                                 #:log-file (string-append log-directory
@@ -242,6 +277,9 @@ identities where SOPS should look for when decrypting a secret.")
             (string-append "file-system-" secrets-directory)))))
   (define entrypoint-name
     (sops-secret->program-entrypoint secret))
+  (define entrypoint
+    (program-file entrypoint-name
+                  (activate-secret secret runtime-state)))
   (shepherd-service (provision
                      (list
                       (sops-secret->shepherd-service-name
@@ -251,15 +289,14 @@ identities where SOPS should look for when decrypting a secret.")
                     (documentation
                      "SOPS secret decrypting service.")
                     (start
-                     #~(make-forkexec-constructor
-                        (list
-                         #$(program-file
-                            entrypoint-name
-                            (activate-secret secret runtime-state)))
+                     #~(#$make-system-constructor
+                        (string-join
+                         '("exec" "-a" #$entrypoint #$entrypoint) " ")
                         #$@(if log-directory
                                (list
-                                #:log-file (string-append log-directory
-                                                          "/" entrypoint-name ".log"))
+                                #:log-file
+                                (string-append log-directory
+                                               "/" entrypoint-name ".log"))
                                '())))
                     (stop
                      #~(make-kill-destructor))))
@@ -269,19 +306,23 @@ identities where SOPS should look for when decrypting a secret.")
     (sops-runtime-state-log-directory runtime-state))
   (define secrets-directory
     (sops-runtime-state-secrets-directory runtime-state))
+  (define entrypoint
+    (program-file "sops-secrets-generate-key"
+                  (generate-ssh-key runtime-state)))
   (shepherd-service (provision '(sops-secrets-host-key))
                     (requirement '(user-processes))
                     (one-shot? #t)
                     (documentation
                      "Generate host key for the SOPS service to use.")
                     (start
-                     #~(make-forkexec-constructor
-                        (list
-                         #$(program-file "sops-secrets-generate-key"
-                                         (generate-ssh-key runtime-state)))
+                     #~(#$make-system-constructor
+                        (string-join
+                         '("exec" "-a" #$entrypoint #$entrypoint) " ")
                         #$@(if log-directory
-                               (list #:log-file (string-append log-directory
-                                                               "/sops-secrets-host-key.log"))
+                               (list
+                                #:log-file
+                                (string-append log-directory
+                                               "/sops-secrets-host-key.log"))
                                '())))
                     (stop
                      #~(make-kill-destructor))))

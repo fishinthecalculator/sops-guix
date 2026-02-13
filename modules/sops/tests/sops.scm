@@ -120,12 +120,14 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
    (group "users")
    (permissions #o440)))
 
+;; To test the VM's environment in a shell you can run
+;; $(guix system vm -L $(pwd)/modules -e '(@ (sops tests sops) %sops-os)')
 (define %sops-os
   (simple-operating-system
    (extra-special-file "/etc/ssh/ssh_host_rsa_key"
                        (plain-file "ssh_host_rsa_key" rsa-ssh-key))
    (simple-service 'profile-with-gnupg profile-service-type
-                    (specifications->packages '("gawk" "gnupg")))
+                    (specifications->packages '("gawk" "gnupg" "tmux")))
    (service sops-secrets-service-type
             (sops-service-configuration
              (generate-key? #t)
@@ -275,12 +277,14 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
    (description "Test the SOPS service with default settings.")
    (value (run-sops-test))))
 
+;; To test the VM's environment in a shell you can run
+;; $(guix system vm -L $(pwd)/modules -e '(@ (sops tests sops) %sops-os)')
 (define %sops-age-os
   (simple-operating-system
    (extra-special-file "/etc/ssh/ssh_host_ed25519_key"
                        (plain-file "ssh_host_ed25519_key" ed25519-ssh-key))
    (simple-service 'profile-with-gnupg profile-service-type
-                   (specifications->packages '("age")))
+                   (specifications->packages '("age" "tmux")))
    (service sops-secrets-service-type
             (sops-service-configuration
              (generate-key? #t)
