@@ -123,9 +123,12 @@ service."
 
             (for-each
              (lambda (secret)
-               (wait-for-file (string-append secrets-directory "/" secret))
+               (define secret-path
+                 (string-append secrets-directory "/" secret))
+               (wait-for-file secret-path)
                (when #$verbose?
-                 (format (current-output-port) "~a successfully created.~%")))
+                 (format (current-output-port) "~a successfully created.~%"
+                         secret-path)))
              (list #$@sops-secrets-names))
 
             (format
