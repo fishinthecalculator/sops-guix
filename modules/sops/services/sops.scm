@@ -251,7 +251,7 @@ identities where SOPS should look for when decrypting a secret.")
                     (start
                      #~(#$make-system-constructor
                         (string-join
-                         '("exec" "-a" #$entrypoint #$entrypoint) " ")
+                         '("exec" #$entrypoint) " ")
                         #$@(if log-directory
                                (list
                                 #:log-file (string-append log-directory
@@ -291,7 +291,7 @@ identities where SOPS should look for when decrypting a secret.")
                     (start
                      #~(#$make-system-constructor
                         (string-join
-                         '("exec" "-a" #$entrypoint #$entrypoint) " ")
+                         '("exec" #$entrypoint) " ")
                         #$@(if log-directory
                                (list
                                 #:log-file
@@ -317,7 +317,7 @@ identities where SOPS should look for when decrypting a secret.")
                     (start
                      #~(#$make-system-constructor
                         (string-join
-                         '("exec" "-a" #$entrypoint #$entrypoint) " ")
+                         '("exec" #$entrypoint) " ")
                         #$@(if log-directory
                                (list
                                 #:log-file
