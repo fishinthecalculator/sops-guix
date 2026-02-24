@@ -34,13 +34,6 @@
             %default-sops-secrets-directory
             sops-secret->secret-file
 
-            sops-public-key
-            sops-public-key?
-            sops-public-key-fields
-            sops-public-key-name
-            sops-public-key-value
-            sops-public-key-type
-
             sops-service-configuration
             sops-service-configuration?
             sops-service-configuration-fields
@@ -69,22 +62,6 @@ argument DIRECTORY allows overriding the default directory where secrets are
 stored."
   (string-append directory "/" (sops-secret->file-name secret)))
 
-(define-configuration/no-serialization sops-public-key
-  (name
-   (string)
-   "The name of the SOPS key.")
-  (value
-   (string)
-   "The value of the public key.")
-  (type
-   (symbol)
-   (string-append "A symbol denoting the type of public key, supported types
-are:
-
-@itemize
-@item @code{'gpg}
-@item @code{'age}
-@end itemize")))
 
 (define (sanitize-secrets secrets)
   (let loop ((keys '())
