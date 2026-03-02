@@ -3,6 +3,7 @@
 
 (define-module (sops build activation)
   #:use-module (guix build utils)
+  #:use-module (guix utils)
   #:use-module (ice-9 format)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 match)
@@ -96,17 +97,12 @@ and can be symlinked to EXTRA-LINKS-DIRECTORY, depending on user configuration."
           (format (current-error-port) "Running~{ ~a~}~%" command))
         (mkdir-p (dirname output))
 
-        ;; First, create a temporary file
-        (let* ((port (mkstemp (string-append (dirname output)
-                                             "/secret-XXXXXX")))
-               (tmp (port-filename port)))
-          ;; Set it read/write only for the current user
-          (chmod port #o600)
-          ;; Write the secret
-          (spawn sops command #:output port)
-          (close-port port)
-          ;; Rename the temporary file to its actual name
-          (rename-file tmp output))
+        (with-atomic-file-output output
+          (lambda (port)
+            ;; Set it read/write only for the current user
+            (chmod port #o600)
+            ;; Write the secret
+            (spawn sops command #:output port)))
 
         (when verbose?
           (format (current-error-port) "~a has been created.~%" output))
