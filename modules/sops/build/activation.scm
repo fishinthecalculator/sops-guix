@@ -7,19 +7,34 @@
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
-  #:export (sops-secrets-directories
+  #:export (%secrets-directory-name
+            %default-sops-secrets-directory
+            %extra-links-directory-name
+            %default-extra-links-directory
+
+            sops-secrets-directories
             sops-secrets-setenv
             sops-secret-cleanup
             sops-secret-create))
+
+(define %secrets-directory-name
+  "secrets")
+(define %default-sops-secrets-directory
+  (string-append "/run/" %secrets-directory-name))
+
+(define %extra-links-directory-name
+  ".extra-links")
+(define (%default-extra-links-directory secrets-directory)
+  (string-append secrets-directory "/" %extra-links-directory-name))
 
 (define* (sops-secrets-directories #:optional maybe-secrets-directory)
   (define secrets-directory
     (or maybe-secrets-directory
         (string-append
-         "/run/user/" (number->string (getuid)) "/secrets")))
+         "/run/user/" (number->string (getuid)) "/" %secrets-directory-name)))
 
   (define extra-links-directory
-    (string-append secrets-directory "/extra"))
+    (%default-extra-links-directory secrets-directory))
 
   (values secrets-directory extra-links-directory))
 
@@ -42,32 +57,33 @@ command line entrypoints."
 provisioned.  The service keeps track of these links into EXTRA-LINKS-DIRECTORY,
 to be able to manage their lifecycle.  This procedure's purpose is to cleanup
 symlinks and secrets files before provisioning new ones."
-  (define* (list-content directory #:key (exclude '()))
-    (scandir directory
-             (lambda (file)
-               (not (member file `("." ".." ,@exclude))))
-             string<?))
+  (define (rm-rv file)
+    (format (current-error-port) "Removing ~a...~%" file)
+    (delete-file-recursively file))
 
   ;; Cleanup secret symlink
   (when (and link (file-exists? extra-links-directory))
     (for-each
-     (lambda (extra-link)
-       (define link-path (string-append extra-links-directory "/" extra-link))
-       (define link-target (readlink link-path))
+     (lambda (link-path)
        ;; Identify current's secret link
-       (when (string=? link-target link)
+       (when (string=? (readlink link-path) link)
+         (format (current-error-port)
+                 "Detected link ~a -> ~a...~%"
+                 link-path link)
          ;; The user may have manually deleted the target.
-         (when (file-exists? link-target)
-           (format (current-error-port)
-                   "Removing ~a -> ~a...~%"
-                   link-path link-target)
-           (delete-file-recursively link-target))))
-     (list-content extra-links-directory)))
+         (when (file-exists? link)
+           (rm-rv link))
+         (rm-rv link-path)))
+     (find-files extra-links-directory)))
+
+  ;; Cleanup extra links directory
+  (when (and (file-exists? extra-links-directory)
+             (equal? (find-files extra-links-directory) '()))
+    (rm-rv extra-links-directory))
 
   ;; Cleanup secret
   (when (file-exists? secret)
-    (format (current-error-port) "Removing ~a...~%" secret)
-    (delete-file secret)))
+    (rm-rv secret)))
 
 (define* (sops-secret-create sops secret secrets-directory
                              extra-links-directory #:key verbose?)

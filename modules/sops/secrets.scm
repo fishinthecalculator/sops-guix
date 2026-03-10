@@ -6,11 +6,14 @@
   #:use-module (guix diagnostics)
   #:use-module (guix gexp)
   #:use-module (guix i18n)
+  #:use-module (sops build activation)
   #:use-module (sops validation)
   #:use-module (ice-9 match)
   #:use-module (ice-9 regex)
   #:use-module (ice-9 string-fun)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-34)
+  #:use-module (srfi srfi-35)
   #:export (sanitize-sops-key
             sops-list-key->sops-string-key
             key->file-name
@@ -41,6 +44,11 @@ or if you are really it's a bug in SOPS Guix make sure to report it at https://g
 (define (sops-list-key->sops-string-key value)
   (apply string-append
          (map (lambda (key)
+                (when (string=? %extra-links-directory-name key)
+                  (raise
+                   (formatted-message
+                    (G_ "SOPS secret key can't be the same as the extra links directory: ~a. Please change it.")
+                    key)))
                 (format #f "[~a]" (if (number? key)
                                       key
                                       (format #f "\"~a\"" key))))

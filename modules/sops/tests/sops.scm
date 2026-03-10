@@ -118,6 +118,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
    (file komputilo.yaml)
    (user "alice")
    (group "users")
+   (path "/bonfire-secret")
    (permissions #o440)))
 
 ;; To test the VM's environment in a shell you can run
@@ -253,6 +254,19 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
                  (getgrgid
                   (stat:gid
                    (stat "/run/secrets/bonfire/p@stgresql_password")))))
+             marionette))
+
+          (test-equal "bonfire secret extra link is correct"
+            "super-secret"
+            (marionette-eval
+             '(begin
+                (use-modules (ice-9 textual-ports))
+                (and (file-exists? "/bonfire-secret")
+                     (equal? 'symlink (stat:type (lstat "/bonfire-secret")))
+                     (string=? (readlink "/bonfire-secret")
+                               "/run/secrets/bonfire/p@stgresql_password")
+                     (call-with-input-file "/run/secrets/bonfire/p@stgresql_password"
+                       get-string-all)))
              marionette))
 
           (test-assert "sops-secrets.log created"
@@ -410,6 +424,19 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
                  (getgrgid
                   (stat:gid
                    (stat "/run/secrets/bonfire/p@stgresql_password")))))
+             marionette))
+
+          (test-equal "bonfire secret extra link is correct"
+            "super-secret"
+            (marionette-eval
+             '(begin
+                (use-modules (ice-9 textual-ports))
+                (and (file-exists? "/bonfire-secret")
+                     (equal? 'symlink (stat:type (lstat "/bonfire-secret")))
+                     (string=? (readlink "/bonfire-secret")
+                               "/run/secrets/bonfire/p@stgresql_password")
+                     (call-with-input-file "/run/secrets/bonfire/p@stgresql_password"
+                       get-string-all)))
              marionette))
 
           (test-assert "sops-secrets.log created"

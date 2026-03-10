@@ -18,6 +18,7 @@
   #:use-module (gnu packages golang-crypto)
   #:use-module (sops packages sops)
   #:use-module (sops services configuration)
+  #:use-module (sops build activation)
   #:use-module (sops activation)
   #:use-module (sops secrets)
   #:use-module (sops self)
@@ -26,12 +27,13 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-35)
+  ;; For backward compatibility
+  #:re-export (%default-sops-secrets-directory)
   #:export (sops-secrets-service-type
 
             sops-secrets-shepherd-service
             sops-secret-decrypt-shepherd-service
 
-            %default-sops-secrets-directory
             sops-secret->secret-file
 
             sops-public-key
@@ -58,9 +60,6 @@
 
 (define list-of-sops-secrets?
   (list-of sops-secret?))
-
-(define %default-sops-secrets-directory
-  "/run/secrets")
 
 (define* (sops-secret->secret-file secret #:key
                                    (directory %default-sops-secrets-directory))
