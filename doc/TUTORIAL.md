@@ -95,7 +95,9 @@ Now you can simply add the following to your configuration:
 
 ``` scheme
 (use-modules (sops secrets)
-             (sops services sops))
+             (sops services sops)
+             (guix gexp)
+             (gnu services))
 
 (define common.yaml
   ;; The path to your encrypted secrets.
@@ -146,7 +148,9 @@ Now you can simply add the following to your configuration:
 
 ``` scheme
 (use-modules (sops secrets)
-             (sops home services sops))
+             (sops home services sops)
+             (guix gexp)
+             (gnu home services))
 
 (define user1.yaml
   ;; The path to your encrypted secrets.
