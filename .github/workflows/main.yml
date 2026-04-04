@@ -46,6 +46,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       # Runs a set of commands using the runners shell
+      - name: Build sops package
+        run: guix build -L $(pwd)/modules sops
+
       - name: Run unit tests
         run: guix shell blue -- blue check
 
