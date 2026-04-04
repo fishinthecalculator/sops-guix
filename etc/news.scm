@@ -1,5 +1,10 @@
 (channel-news
   (version 0)
+  (entry (commit "74bb0703f3eacccbef63f50365b3cb8730904262")
+         (title (en "Drop sops-public-key configuration record.")
+                (it "Rimozione record di configurazione sops-public-key."))
+         (body (en "The record was added for a feature which remained undeveloped (generation of sops.yaml files from s-expressions), and has since become obsolete. The record effectively constituted a public API surface, albeit rather useless. This change definitely drops the code before it starts rotting.")
+               (it "Il record è stato aggiunto a supporto di una funzionalità che non è mai stata sviluppata (la generazione di file sops.yaml da s-expressions), e da allora è diventata obsoleta. Il record costituiva a tutti gli effetti una API pubblica, per quanto inutile. Questo commit rimuove definitivamente quel codice prima che cominci a marcire.")))
   (entry (commit "a0ef8caff6182ffe99ad680a9052cf69b8eafc57")
          (title (en "The @code{postgresql-role-service-type} changes from @code{(sops services databases)} have been upstreamed to Guix mainline (9d216d2ae9f9a4ff2935c23a209499b17dcb13a5).")
                 (it "I cambiamenti del @code{postgresql-role-service-type} in @code{(sops services databases)} sono stati inviati a Guix mainline (9d216d2ae9f9a4ff2935c23a209499b17dcb13a5)."))
