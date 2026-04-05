@@ -55,7 +55,8 @@ service."
             (file-append sops "/bin/sops")))
 
       (with-imported-modules (source-module-closure
-                              '((sops build activation))
+                              '((guix utils)
+                                (sops build activation))
                               #:select? sops-module-name?)
         #~(begin
             (use-modules (guix build utils)
