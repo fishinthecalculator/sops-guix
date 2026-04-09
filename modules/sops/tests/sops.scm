@@ -334,10 +334,9 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
           (test-runner-current (system-test-runner #$output))
           (test-begin "sops-age")
 
-          (test-assert "age key file has been created"
-            (wait-for-file "/root/.config/sops/age/keys.txt" marionette #:timeout 60))
+          (sleep 60)
 
-          (test-equal "age key content is sound"
+          (test-equal "age key has been generated"
             "age16mhhz8lsra7h0z60h89xwhsdhphxqgr88hqu0hky4kt67qpp0vrs0xp556\n"
             (marionette-eval
              '(begin

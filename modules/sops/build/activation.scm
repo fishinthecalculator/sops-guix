@@ -6,7 +6,6 @@
   #:use-module (ice-9 format)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 match)
-  #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
   #:export (%secrets-directory-name
             %default-sops-secrets-directory
@@ -90,10 +89,6 @@ symlinks and secrets files before provisioning new ones."
                              extra-links-directory #:key verbose?)
   "Create SECRET by calling SOPS.  Secrets are created in SECRETS-DIRECTORY
 and can be symlinked to EXTRA-LINKS-DIRECTORY, depending on user configuration."
-  (define (secret-null? output)
-    (let ((secret (call-with-input-file output get-string-all)))
-      (or (eof-object? secret)
-          (string-null? secret))))
   ;; Actually decrypt secrets
   ((match-lambda
      ((key secrets-file user group permissions output-type path derived-name)
@@ -126,50 +121,41 @@ and can be symlinked to EXTRA-LINKS-DIRECTORY, depending on user configuration."
           ;; Write the secret
           (spawn sops command #:output port)
           (close-port port)
+          ;; Rename the temporary file to its actual name
+          (rename-file tmp output))
 
-          (define null? (secret-null? tmp))
+        (when verbose?
+          (format (current-error-port) "~a has been created.~%" output))
 
-          (when null?
+        ;; Setting owner is supported only in the system service
+        (when (= (getuid) 0)
+          (for-each
+           (lambda (file)
+             (when verbose?
+               (format
+                (current-error-port)
+                "Changing owner of ~a to ~a:~a~%" file uid gid))
+             (chown file uid gid))
+           (find-files
+            (string-append
+             secrets-directory "/" (first (string-split derived-name #\/)))
+            #:directories? #t)))
+        ;; Permissions are supported regardless
+        (chmod output permissions)
+        (when verbose?
+          (format
+           (current-error-port)
+           "Setting ~a's permissions to ~a~%" output permissions))
+
+        (when path
+          ;; First try to setup the symlink
+          (symlink output path)
+
+          ;; If everything goes well, setup symlink for
+          ;; cleaning up
+          (mkdir-p (dirname gc-link))
+          (symlink path gc-link)
+          (when verbose?
             (format (current-error-port)
-                    "secret '~a' is empty, skipping it...~%" key)
-            (exit 1))
-
-          (unless null?
-            ;; Rename the temporary file to its actual name
-            (rename-file tmp output)
-
-            (when verbose?
-              (format (current-error-port) "~a has been created.~%" output))
-
-            ;; Setting owner is supported only in the system service
-            (when (= (getuid) 0)
-              (for-each
-               (lambda (file)
-                 (when verbose?
-                   (format
-                    (current-error-port)
-                    "Changing owner of ~a to ~a:~a~%" file uid gid))
-                 (chown file uid gid))
-               (find-files
-                (string-append
-                 secrets-directory "/" (first (string-split derived-name #\/)))
-                #:directories? #t)))
-            ;; Permissions are supported regardless
-            (chmod output permissions)
-            (when verbose?
-              (format
-               (current-error-port)
-               "Setting ~a's permissions to ~a~%" output permissions))
-
-            (when path
-              ;; First try to setup the symlink
-              (symlink output path)
-
-              ;; If everything goes well, setup symlink for
-              ;; cleaning up
-              (mkdir-p (dirname gc-link))
-              (symlink path gc-link)
-              (when verbose?
-                (format (current-error-port)
-                        "Setup symlink at ~a and ~a~%" path gc-link))))))))
+                    "Setup symlink at ~a and ~a~%" path gc-link))))))
    secret))
