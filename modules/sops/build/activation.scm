@@ -25,9 +25,12 @@
 (define %extra-links-directory-name
   ".extra-links")
 (define (%default-extra-links-directory secrets-directory)
+  "Return the name of the extra-links directory inside SECRETS-DIRECTORY."
   (string-append secrets-directory "/" %extra-links-directory-name))
 
 (define* (sops-secrets-directories #:optional maybe-secrets-directory)
+  "Returns two directory names: the secrets directory and the extra-links
+directory."
   (define secrets-directory
     (or maybe-secrets-directory
         (string-append
@@ -89,6 +92,13 @@ symlinks and secrets files before provisioning new ones."
                              extra-links-directory #:key verbose?)
   "Create SECRET by calling SOPS.  Secrets are created in SECRETS-DIRECTORY
 and can be symlinked to EXTRA-LINKS-DIRECTORY, depending on user configuration."
+  (define (sops-fails? command)
+    (with-error-to-file "/dev/null"
+      (lambda ()
+        (with-output-to-file "/dev/null"
+          (lambda ()
+            (define status (status:exit-val (apply system* command)))
+            (> status 0))))))
   ;; Actually decrypt secrets
   ((match-lambda
      ((key secrets-file user group permissions output-type path derived-name)
@@ -110,6 +120,13 @@ and can be symlinked to EXTRA-LINKS-DIRECTORY, depending on user configuration."
 
         (when verbose?
           (format (current-error-port) "Running~{ ~a~}~%" command))
+
+        (when (sops-fails? command)
+          (format (current-error-port)
+                  "SOPS command failed, secret '~a' won't be provisioned...~%"
+                  key)
+          (exit 1))
+
         (mkdir-p (dirname output))
 
         ;; First, create a temporary file
@@ -121,6 +138,7 @@ and can be symlinked to EXTRA-LINKS-DIRECTORY, depending on user configuration."
           ;; Write the secret
           (spawn sops command #:output port)
           (close-port port)
+
           ;; Rename the temporary file to its actual name
           (rename-file tmp output))
 
@@ -140,6 +158,7 @@ and can be symlinked to EXTRA-LINKS-DIRECTORY, depending on user configuration."
             (string-append
              secrets-directory "/" (first (string-split derived-name #\/)))
             #:directories? #t)))
+
         ;; Permissions are supported regardless
         (chmod output permissions)
         (when verbose?
@@ -157,5 +176,7 @@ and can be symlinked to EXTRA-LINKS-DIRECTORY, depending on user configuration."
           (symlink path gc-link)
           (when verbose?
             (format (current-error-port)
-                    "Setup symlink at ~a and ~a~%" path gc-link))))))
+                   "Setup symlink: ~a -> ~a~%" path output)
+            (format (current-error-port)
+                    "Setup symlink: ~a -> ~a~%" gc-link path))))))
    secret))
