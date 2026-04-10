@@ -16,7 +16,7 @@
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages golang)
   #:use-module (gnu packages golang-crypto)
-  #:use-module (sops packages sops)
+  #:use-module (gnu packages password-utils)
   #:use-module (sops services configuration)
   #:use-module (sops build activation)
   #:use-module (sops activation)
