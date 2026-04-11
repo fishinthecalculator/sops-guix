@@ -203,6 +203,15 @@ identities where SOPS should look for when decrypting a secret.")
                       command))
                  #:log-file log-file))))))
 
+(define (sops-entrypoint-shepherd-action entrypoint)
+  "Return a Shepherd action printing the ENTRYPOINT of a SOPS Shepherd service."
+  (shepherd-action
+   (name 'entrypoint)
+   (documentation "Prints service entrypoint.")
+   (procedure
+    #~(lambda _
+        (format #t "~a~%" #$entrypoint)))))
+
 (define* (sops-secrets-shepherd-service runtime-state
                                         #:key (sops-provision '(sops-secrets))
                                         (sops-requirement '(user-processes))
@@ -234,7 +243,10 @@ identities where SOPS should look for when decrypting a secret.")
                                                           "/sops-secrets.log"))
                                '())))
                     (stop
-                     #~(make-kill-destructor))))
+                     #~(make-kill-destructor))
+                    (actions
+                     (list
+                      (sops-entrypoint-shepherd-action entrypoint)))))
 
 (define* (sops-secret-decrypt-shepherd-service secret runtime-state #:key
                                                home-service?
@@ -275,7 +287,10 @@ identities where SOPS should look for when decrypting a secret.")
                                                "/" entrypoint-name ".log"))
                                '())))
                     (stop
-                     #~(make-kill-destructor))))
+                     #~(make-kill-destructor))
+                    (actions
+                     (list
+                      (sops-entrypoint-shepherd-action entrypoint)))))
 
 (define (sops-secrets-host-key-shepherd-service runtime-state)
   (define log-directory
@@ -301,7 +316,10 @@ identities where SOPS should look for when decrypting a secret.")
                                                "/sops-secrets-host-key.log"))
                                '())))
                     (stop
-                     #~(make-kill-destructor))))
+                     #~(make-kill-destructor))
+                    (actions
+                     (list
+                      (sops-entrypoint-shepherd-action entrypoint)))))
 
 (define (sops-secrets-shepherd-services config)
   (when config
