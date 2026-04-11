@@ -117,7 +117,7 @@ which will be directly passed to @command{sops -d --extract} or a list of string
 representing the path of the value you want to reference in the secrets file."
    (sanitizer sanitize-sops-key))
   (file
-   (gexp-or-file-like)
+   (string-or-file-like)
    "A gexp or file-like object evaluating to the secrets file.")
   (user
    (string "root")

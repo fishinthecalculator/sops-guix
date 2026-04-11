@@ -25,9 +25,7 @@
   (string-append (current-source-directory) "/data"))
 
 (define %secrets-dir
-  (local-file (string-append %channel-root "/secrets")
-              "secrets-dir"
-              #:recursive? #t))
+  (string-append %channel-root "/secrets"))
 
 (define rsa-ssh-key
   "-----BEGIN OPENSSH PRIVATE KEY-----
@@ -90,7 +88,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
 -----END OPENSSH PRIVATE KEY-----")
 
 (define-public (secrets-file file-name)
-  (file-append %secrets-dir "/" file-name))
+  (string-append "/etc/" file-name))
 
 ;; To add secrets to this file follow these steps:
 ;;
@@ -128,7 +126,13 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
    (extra-special-file "/etc/ssh/ssh_host_rsa_key"
                        (plain-file "ssh_host_rsa_key" rsa-ssh-key))
    (simple-service 'profile-with-gnupg profile-service-type
-                    (specifications->packages '("gawk" "gnupg" "tmux")))
+                   (specifications->packages '("gawk" "gnupg" "tmux")))
+   ;; These should be provisioned out of band in a real environment
+   (simple-service 'encrypted-secrets
+                   etc-service-type
+                   `(("komputilo.yaml"
+                      ,(local-file
+                        (string-append %secrets-dir "/komputilo.yaml")))))
    (service sops-secrets-service-type
             (sops-service-configuration
              (generate-key? #t)
@@ -299,6 +303,12 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
                        (plain-file "ssh_host_ed25519_key" ed25519-ssh-key))
    (simple-service 'profile-with-gnupg profile-service-type
                    (specifications->packages '("age" "tmux")))
+   ;; These should be provisioned out of band in a real environment
+   (simple-service 'encrypted-secrets
+                   etc-service-type
+                   `(("komputilo.yaml"
+                      ,(local-file
+                        (string-append %secrets-dir "/komputilo.yaml")))))
    (service sops-secrets-service-type
             (sops-service-configuration
              (generate-key? #t)
