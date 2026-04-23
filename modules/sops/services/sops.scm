@@ -239,8 +239,8 @@ identities where SOPS should look for when decrypting a secret.")
                          '("exec" #$entrypoint) " ")
                         #$@(if log-directory
                                (list
-                                #:log-file (string-append log-directory
-                                                          "/sops-secrets.log"))
+                                #:log-file #~(string-append #$log-directory
+                                                            "/sops-secrets.log"))
                                '())))
                     (stop
                      #~(make-kill-destructor))
@@ -273,6 +273,10 @@ identities where SOPS should look for when decrypting a secret.")
                       (sops-secret->shepherd-service-name
                        secret #:home-service? home-service?)))
                     (requirement requirement)
+                    (modules (if home-service?
+                                 ;;for %user-log-dir
+                                 '((shepherd support))
+                                 '()))
                     (one-shot? #t)
                     (documentation
                      "SOPS secret decrypting service.")
@@ -283,8 +287,8 @@ identities where SOPS should look for when decrypting a secret.")
                         #$@(if log-directory
                                (list
                                 #:log-file
-                                (string-append log-directory
-                                               "/" entrypoint-name ".log"))
+                                #~(string-append #$log-directory
+                                                 "/" #$entrypoint-name ".log"))
                                '())))
                     (stop
                      #~(make-kill-destructor))
@@ -312,8 +316,8 @@ identities where SOPS should look for when decrypting a secret.")
                         #$@(if log-directory
                                (list
                                 #:log-file
-                                (string-append log-directory
-                                               "/sops-secrets-host-key.log"))
+                                #~(string-append #$log-directory
+                                                 "/sops-secrets-host-key.log"))
                                '())))
                     (stop
                      #~(make-kill-destructor))
