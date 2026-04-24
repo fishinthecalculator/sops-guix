@@ -3,6 +3,7 @@
 
 (define-module (sops build activation)
   #:use-module (guix build utils)
+  #:use-module (sops build utils)
   #:use-module (ice-9 format)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 match)
@@ -60,9 +61,6 @@ command line entrypoints."
 provisioned.  The service keeps track of these links into EXTRA-LINKS-DIRECTORY,
 to be able to manage their lifecycle.  This procedure's purpose is to cleanup
 symlinks and secrets files before provisioning new ones."
-  (define (rm-rv file)
-    (format (current-error-port) "Removing ~a...~%" file)
-    (delete-file-recursively file))
 
   ;; Cleanup secret symlink
   (when (and link (file-exists? extra-links-directory))
@@ -71,13 +69,13 @@ symlinks and secrets files before provisioning new ones."
        ;; Identify current's secret link
        (when (string=? (readlink link-path) link)
          (format (current-error-port)
-                 "Detected link ~a -> ~a...~%"
+                 "Detected extra link ~a -> ~a...~%"
                  link-path link)
-         ;; The user may have manually deleted the target.
-         (when (file-exists? link)
-           (rm-rv link))
          (rm-rv link-path)))
      (find-files extra-links-directory)))
+  ;; The user may have manually deleted the target.
+  (when (and link (file-exists? link))
+    (rm-rv link))
 
   ;; Cleanup extra links directory
   (when (and (file-exists? extra-links-directory)
