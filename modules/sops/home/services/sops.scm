@@ -33,7 +33,6 @@
             home-sops-service-configuration-gnupg
             home-sops-service-configuration-sops
             home-sops-service-configuration-config
-            home-sops-service-configuration-log-directory
             home-sops-service-configuration-gnupg-home
             home-sops-service-configuration-age-key-file
             home-sops-service-configuration-verbose?
@@ -90,13 +89,6 @@ It defaults to @code{~/.gnupg}"
 look for when decrypting a secret.  It defaults to
 @code{~/.config/sops/age/keys.txt}"
    (sanitizer home-sops-service-age-key-file))
-  (log-directory
-   (string-or-gexp
-    #~(begin
-        (use-modules (shepherd support))
-        %user-log-dir))
-   "The name of a directory where the sops service will create its log files. By
-default it is set to @code{%user-log-dir} from @code{(shepherd support)}.")
   (verbose?
    (boolean #f)
    "When true the service will print extensive information about its execution
@@ -112,12 +104,11 @@ SOPS secrets."))
 
 (define (home-sops-service-configuration->sops-runtime-state config)
   (match-record config <home-sops-service-configuration>
-                (gnupg sops log-directory verbose? secrets)
+                (gnupg sops verbose? secrets)
     (sops-runtime-state
      (age-key-file (home-sops-service-configuration-age-key-file config))
      (gnupg-home (home-sops-service-configuration-gnupg-home config))
      (secrets secrets)
-     (log-directory log-directory)
      (sops sops)
      (gpg-command gnupg)
      (verbose? verbose?))))
