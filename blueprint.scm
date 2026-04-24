@@ -17,9 +17,20 @@
    (category 'dispatch))
   (zero?
    (popen "guix"
-          `("build"
+          `("time-machine" "-C" ,(in-vicinity (getcwd) "etc/test-channels.scm")
+            "--" "build"
             "-L" ,(in-vicinity (getcwd) "modules")
             "-m" "etc/manifests/system-tests.scm"))))
+
+(define-command (system-tests-vm-command arguments)
+  ((invoke "system-tests-vm")
+   (category 'dispatch))
+  (zero?
+   (popen "guix"
+          `("time-machine" "-C" ,(in-vicinity (getcwd) "etc/test-channels.scm")
+            "--" "system" "vm"
+            "-L" ,(in-vicinity (getcwd) "modules")
+            "-e" "(@ (sops tests sops) %sops-age-os)"))))
 
 (define-command (clean-command arguments)
   ((invoke "clean")
@@ -33,4 +44,5 @@
   (list
    check-command
    clean-command
-   system-tests-command)))
+   system-tests-command
+   system-tests-vm-command)))

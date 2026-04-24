@@ -92,11 +92,13 @@ service."
            (map sops-secret->file-name secrets)))
 
       (with-imported-modules (source-module-closure
-                              '((sops build activation)
+                              '((guix build utils)
+                                (sops build activation)
                                 (sops build utils))
                               #:select? sops-module-name?)
         #~(begin
-            (use-modules (sops build activation)
+            (use-modules (guix build utils)
+                         (sops build activation)
                          (sops build utils)
                          (ice-9 format))
 
@@ -112,6 +114,32 @@ service."
                  (format (current-output-port) "~a successfully created.~%"
                          secret-path)))
              (list #$@sops-secrets-names))
+
+            ;; Garbage collect extra symlinks
+            (for-each
+             (lambda (link-path)
+               ;; Identify dangling symlinks
+               (define secret-link (readlink link-path))
+               (if (file-exists? secret-link)
+                   (if (eq? 'symlink (stat:type (lstat secret-link)))
+                       (let ((linked-secret (readlink secret-link)))
+                         (unless (file-exists? linked-secret)
+                           (format (current-error-port)
+                                 "Secret symlink ~a links to secret ~a which \
+doesn't exist anymore.~%"
+                                 secret-link linked-secret)
+                           (rm-rv secret-link)
+                           (rm-rv link-path)))
+                       (format (current-error-port)
+                               "WARNING: Extra symlink ~a links to ~a which \
+doesn't look like a secret symlink.~%"
+                               link-path secret-link))
+                   (begin
+                     (format (current-error-port)
+                             "Detected dangling extra link ~a -> ~a...~%"
+                             link-path link)
+                     (rm-rv link-path))))
+             (find-files extra-links-directory))
 
             (format
              (current-error-port)
