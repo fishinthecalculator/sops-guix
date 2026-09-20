@@ -44,7 +44,8 @@ or if you are really it's a bug in SOPS Guix make sure to report it at https://g
 (define (sops-list-key->sops-string-key value)
   (apply string-append
          (map (lambda (key)
-                (when (string=? %extra-links-directory-name key)
+                (when (and (string? key)
+                           (string=? %extra-links-directory-name key))
                   (raise
                    (formatted-message
                     (G_ "SOPS secret key can't be the same as the extra links directory: ~a. Please change it.")

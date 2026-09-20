@@ -162,11 +162,17 @@ identities where SOPS should look for when decrypting a secret.")
                       #\-))
                 key))
   (define key (sops-secret-key secret))
-  (string-append "sops-secret-"
-                 (store-format
-                  (if (string? key)
-                      key
-                      (string-join key "-")))))
+  (define key-as-string
+    (if (string? key)
+        key
+        (string-join
+         (map (lambda (it)
+                (if (number? it)
+                    (number->string it)
+                    it))
+              key)
+         "-")))
+  (string-append "sops-secret-" (store-format key-as-string)))
 
 ;; This reimplements https://codeberg.org/shepherd/shepherd/pulls/109.
 ;; Once it is merged it can be dropped.
