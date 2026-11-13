@@ -35,6 +35,7 @@
             sops-secret-decrypt-shepherd-service
 
             sops-secret->secret-file
+            sops-secret->shepherd-service-name
 
             sops-service-configuration
             sops-service-configuration?
