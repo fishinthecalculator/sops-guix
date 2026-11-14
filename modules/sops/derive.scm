@@ -10,6 +10,32 @@
   #:use-module (sops self)
   #:export (generate-host-key))
 
+;; GnuPG versions after 2.5.21 refuse keys serialized with ProtonMail/go-crypto < 1.5.2.
+;; See https://github.com/fishinthecalculator/sops-guix/issues/42
+;; TODO: This package can be dropped once https://codeberg.org/guix/guix/pulls/12545
+;; gets merged.
+(use-modules (guix packages) (guix git-download))
+(define ssh-to-pgp/fixed
+  (package
+    (inherit ssh-to-pgp)
+    (native-inputs
+     (modify-inputs (package-native-inputs ssh-to-pgp)
+       (replace "go-github-com-protonmail-go-crypto"
+         (package
+           (inherit go-github-com-protonmail-go-crypto)
+           (version "1.5.2")
+           (source
+            (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/ProtonMail/go-crypto")
+                     (commit (string-append "v" version))))
+              (file-name
+               (git-file-name
+                (package-name go-github-com-protonmail-go-crypto) version))
+              (sha256
+               (base32 "1z0x3hmxqc5s97pbgsjfdwpl9cmhr1hw86ks5vlgv3cw75qxkk80"))))))))))
+
 (define* (generate-host-key age-key-file
                             gnupg-home
                             gpg-command
@@ -47,7 +73,7 @@
                  (let-values (((gpg-key-derivation-status gpg-key gpg-key-id)
                                (generate-gpg-key
                                 #$host-ssh-key
-                                #$(file-append ssh-to-pgp "/bin/ssh-to-pgp")
+                                #$(file-append ssh-to-pgp/fixed "/bin/ssh-to-pgp")
                                 #$gpg-command
                                 #$(file-append grep "/bin/grep")
                                 #$(file-append sed "/bin/sed")
