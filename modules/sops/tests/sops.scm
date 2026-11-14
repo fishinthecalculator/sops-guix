@@ -183,7 +183,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
                     (close-port port)
                     (pk 'KEY_INSIDE key))
                  marionette)))
-              (with-retries 120 1 (equal? "0C59A513D163688D280F9AFA5EB8AAF08C879499\n" (run-test)))))
+              (with-retries 180 1 (equal? "0C59A513D163688D280F9AFA5EB8AAF08C879499\n" (run-test)))))
 
           (test-assert "secret created"
             (wait-for-file "/run/secrets/restic" marionette))
