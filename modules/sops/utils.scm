@@ -2,11 +2,23 @@
 ;;; Copyright © 2024, 2025 Giacomo Leidi <therewasa@fishinthecalculator.me>
 
 (define-module (sops utils)
+  #:use-module (gnu packages)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 match)
   #:use-module (ice-9 rdelim)
   #:use-module (srfi srfi-1)
-  #:export (sops-secrets-sh-command-wrapper))
+  #:export (sops-secrets-sh-command-wrapper
+            sops-search-patches))
+
+(define-syntax sops-search-patches
+  (syntax-rules ()
+    ((_ e ...)
+     (parameterize
+         ((%patch-path
+           (map (lambda (directory)
+                  (string-append directory "/sops/packages/patches"))
+                %load-path)))
+       (search-patches e ...)))))
 
 (define (sops-secrets-sh-command-wrapper secrets-specs command)
   "Returns a POSIX sh command exporting each one of the SECRETS-SPECS, a list of

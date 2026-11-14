@@ -8,6 +8,7 @@
   #:use-module (guix gexp)
   #:use-module (guix modules)
   #:use-module (sops self)
+  #:use-module (sops utils)
   #:export (generate-host-key))
 
 ;; GnuPG versions after 2.5.21 refuse keys serialized with ProtonMail/go-crypto < 1.5.2.
@@ -18,6 +19,13 @@
 (define ssh-to-pgp/fixed
   (package
     (inherit ssh-to-pgp)
+    (source
+     (origin
+       (inherit (package-source ssh-to-pgp))
+       (patches
+        (append (origin-patches (package-source ssh-to-pgp))
+                (sops-search-patches
+                 "ssh-to-pgp-convert-Normalize-keys-before-serializing-them.patch")))))
     (native-inputs
      (modify-inputs (package-native-inputs ssh-to-pgp)
        (replace "go-github-com-protonmail-go-crypto"

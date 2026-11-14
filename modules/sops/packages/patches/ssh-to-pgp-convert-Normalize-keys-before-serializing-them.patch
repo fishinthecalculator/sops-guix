@@ -1,0 +1,35 @@
+From 88161bdab01bd27e65be2a376a5e08ebe9b9e430 Mon Sep 17 00:00:00 2001
+From: Giacomo Leidi <therewasa@fishinthecalculator.me>
+Date: Sat, 14 Nov 2026 15:15:25 +0100
+Subject: [PATCH] convert: Normalize keys before serializing them.
+
+This makes ssh-to-pgp compatible again with GnuPG > 2.25.1. It is a
+follow up to
+https://github.com/ProtonMail/go-crypto/commit/7537b30ff8aaf643512ce8bb78f5f92c44ffa6b4 .
+
+This commit should fix https://github.com/Mic92/ssh-to-pgp/issues/331 .
+---
+ convert.go | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/convert.go b/convert.go
+index 4fb8454..6879530 100644
+--- a/convert.go
++++ b/convert.go
+@@ -32,6 +32,13 @@ func SSHPrivateKeyToPGP(sshPrivateKey []byte, name string, comment string, email
+ 	if err != nil {
+ 		return nil, fmt.Errorf("failed to parse private ssh key: %w", err)
+ 	}
++	// go-crypto's serializeRSAPrivateKey writes Primes[1] as p and Primes[0]
++	// as q, requiring Primes[1] < Primes[0]. Normalize them here.
++	if len(key.Primes) == 2 && key.Primes[0].Cmp(key.Primes[1]) < 0 {
++		key.Primes[0], key.Primes[1] = key.Primes[1], key.Primes[0]
++		key.Precomputed = rsa.PrecomputedValues{}
++		key.Precompute()
++	}
+ 
+ 	// Let's make keys reproducible
+ 	timeNull := time.Unix(0, 0)
+-- 
+2.55.0
+
