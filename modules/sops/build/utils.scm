@@ -2,10 +2,15 @@
 ;;; Copyright © 2026 Giacomo Leidi <therewasa@fishinthecalculator.me>
 
 (define-module (sops build utils)
+  #:use-module (guix build utils)
   #:use-module (ice-9 format)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 textual-ports)
-  #:export (run-command slurp wait-for-file))
+  #:export (rm-rv run-command slurp wait-for-file))
+
+(define (rm-rv file)
+  (format (current-error-port) "Removing ~a...~%" file)
+  (delete-file-recursively file))
 
 (define* (run-command invocation #:key verbose?)
   (when verbose?
