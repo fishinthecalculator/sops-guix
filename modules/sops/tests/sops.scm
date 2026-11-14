@@ -171,7 +171,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
           (test-assert "GPG key has been generated"
             (begin
               (define (run-test)
-                (marionette-eval
+                (pk 'KEY_OUTSIDE (marionette-eval
                  '(begin
                     (use-modules (ice-9 popen) (ice-9 textual-ports))
                     (define port
@@ -181,8 +181,8 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
                                   (lambda ()
                                     (get-string-all (current-input-port)))))
                     (close-port port)
-                    key)
-                 marionette))
+                    (pk 'KEY_INSIDE key))
+                 marionette)))
               (with-retries 120 1 (equal? "0C59A513D163688D280F9AFA5EB8AAF08C879499\n" (run-test)))))
 
           (test-assert "secret created"
