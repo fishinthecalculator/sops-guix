@@ -28,6 +28,29 @@
   "Return the name of the extra-links directory inside SECRETS-DIRECTORY."
   (string-append secrets-directory "/" %extra-links-directory-name))
 
+(define* (sops-secret-chown-tree secret secrets-directory uid gid #:key verbose?)
+  (define (run-chown file)
+    (define file-stat (stat file))
+    (define old-uid (stat:uid file-stat))
+    (define old-gid (stat:gid file-stat))
+    (when (or (not (= old-gid gid)) (not (= old-uid uid)))
+      (when verbose?
+        (format
+         (current-error-port)
+         "Changing owner of ~a to ~a:~a~%" file uid gid))
+      (chown file uid gid)))
+  (define relative-path
+    (string-drop secret (1+ (string-length secrets-directory))))
+  ;; Set all parent directories permissions, if needed.
+  (let loop ((directories (drop-right (string-split relative-path #\/) 1))
+             (prefix secrets-directory))
+    (unless (null? directories)
+      (let ((directory (string-append prefix "/" (car directories))))
+        (run-chown directory)
+        (loop (cdr directories) directory))))
+  ;; Set secret file permissions.
+  (run-chown secret))
+
 (define* (sops-secrets-directories #:optional maybe-secrets-directory)
   "Returns two directory names: the secrets directory and the extra-links
 directory."
@@ -147,17 +170,8 @@ and can be symlinked to EXTRA-LINKS-DIRECTORY, depending on user configuration."
 
         ;; Setting owner is supported only in the system service
         (when (= (getuid) 0)
-          (for-each
-           (lambda (file)
-             (when verbose?
-               (format
-                (current-error-port)
-                "Changing owner of ~a to ~a:~a~%" file uid gid))
-             (chown file uid gid))
-           (find-files
-            (string-append
-             secrets-directory "/" (first (string-split derived-name #\/)))
-            #:directories? #t)))
+          (sops-secret-chown-tree output secrets-directory uid gid
+                                  #:verbose? verbose?))
 
         ;; Permissions are supported regardless
         (chmod output permissions)
@@ -176,7 +190,7 @@ and can be symlinked to EXTRA-LINKS-DIRECTORY, depending on user configuration."
           (symlink path gc-link)
           (when verbose?
             (format (current-error-port)
-                   "Setup symlink: ~a -> ~a~%" path output)
+                    "Setup symlink: ~a -> ~a~%" path output)
             (format (current-error-port)
                     "Setup symlink: ~a -> ~a~%" gc-link path))))))
    secret))
