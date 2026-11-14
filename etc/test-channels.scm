@@ -12,4 +12,4 @@
       (channel
        (name 'sops-guix)
        (url (string-append "file://" (dirname (current-source-directory))))
-       (branch "main")))
+       (branch "link-cleanup-fix")))
