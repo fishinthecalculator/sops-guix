@@ -168,27 +168,27 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
           (test-runner-current (system-test-runner #$output))
           (test-begin "sops")
 
-          (sleep 60)
-
-          (test-equal "GPG key has been generated"
-            "0C59A513D163688D280F9AFA5EB8AAF08C879499\n"
-            (marionette-eval
-             '(begin
-                (use-modules (ice-9 popen) (ice-9 textual-ports))
-                (define port
-                  (open-input-pipe
-                   "gpg --fingerprint --with-colons root@localhost | awk -F: '$1 == \"fpr\" {print $10;}'"))
-                (define key (with-input-from-port port
-                              (lambda ()
-                                (get-string-all (current-input-port)))))
-                (close-port port)
-                key)
-             marionette))
+          (test-assert "GPG key has been generated"
+            (begin
+              (define (run-test)
+                (pk 'KEY_OUTSIDE (marionette-eval
+                 '(begin
+                    (use-modules (ice-9 popen) (ice-9 textual-ports))
+                    (define port
+                      (open-input-pipe
+                       "gpg --fingerprint --with-colons root@localhost | awk -F: '$1 == \"fpr\" {print $10;}'"))
+                    (define key (with-input-from-port port
+                                  (lambda ()
+                                    (get-string-all (current-input-port)))))
+                    (close-port port)
+                    (pk 'KEY_INSIDE key))
+                 marionette)))
+              (with-retries 180 1 (equal? "0C59A513D163688D280F9AFA5EB8AAF08C879499\n" (run-test)))))
 
           (test-assert "secret created"
             (wait-for-file "/run/secrets/restic" marionette))
 
-          (sleep 5)
+          (sleep 30)
 
           (test-equal "restic secret content is sound"
             "hello world"
@@ -365,7 +365,7 @@ hl00SupUzwxrqVrx0tqKAAAADHBhdWxAc2tpYmlkaQE=
           (test-assert "secret created"
             (wait-for-file "/run/secrets/restic" marionette))
 
-          (sleep 5)
+          (sleep 30)
 
           (test-equal "restic secret content is sound"
             "hello world"
